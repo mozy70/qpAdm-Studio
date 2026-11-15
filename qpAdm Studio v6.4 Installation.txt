@@ -1,0 +1,1382 @@
+================================================================================
+  qpAdm Studio v6.4 by mozy70
+  KURULUM VE KULLANIM KILAVUZU  /  INSTALLATION AND USER GUIDE
+  (Türkçe: bölüm A  |  English: section B)
+================================================================================
+
+
+################################################################################
+#  A) TÜRKÇE
+################################################################################
+
+Klasordeki 3 dosya:
+  - qpAdm Studio v6.4.R         -> programin kendisi (tek dosya)
+  - qpAdm Studio v6.4 Installation.R -> arayuz paketlerini kuran betik
+  - qpAdm Studio v6.4 Installation.txt -> bu kilavuz
+
+--------------------------------------------------------------------------------
+  KOLAY KURULUM VE BASLATMA: "qpAdm Studio BASLAT.bat" (v6.4 test'ten itibaren)
+--------------------------------------------------------------------------------
+  "qpAdm Studio BASLAT.bat" paylasim zip'inin icindedir; ayrica bir sey
+  indirmeniz gerekmez.
+  1) Zip'i bir klasore cikarin (sag tik > Tumunu ayikla). "qpAdm Studio
+     BASLAT.bat", "qpAdm Studio v6.4.R" dosyasinin yaninda durmali (zip'ten
+     cikinca oyledir).
+  2) "qpAdm Studio BASLAT.bat" dosyasina cift tiklayin. Windows bir guvenlik
+     uyarisi gosterirse "Calistir" (ya da "Ek bilgi" > "Yine de calistir").
+  3) Ilk calistirmada sirayla:
+       [1/5] program dosyasi bulunur;
+       [2/5] R aranir; yoksa (ya da 4.3'ten eskiyse) R 4.5.1 indirilir ve
+             kullanici klasorunuze kurulur (yonetici izni gerekmez);
+       [3/5] eksik paketler kurulur (5-15 dakika surebilir);
+       [4/5] admixtools kurulur ve islevleri denetlenir: once hazir Windows
+             paketi denenir; olmazsa R surumune uygun Rtools indirilir (R 4.5
+             icin Rtools45, yaklasik 450 MB) ve admixtools kaynaktan derlenir
+             (10-20 dakika);
+       [5/5] program tarayicida acilir (port 7654; o port baska bir programca
+             kullaniliyorsa 7655-7699 arasindaki ilk bos port; pencerede yazar).
+     Her adimin iletisi pencerede gorunur; uzun surebilecek adimlar yazilir.
+  4) Sonraki calistirmalarda yalniz denetler ve programi baslatir; program
+     zaten aciksa yalniz tarayicida acar.
+  5) Programi kapatmak icin programin ust cubugundaki "Programi kapat"
+     dugmesine basin ya da tarayici sekmesini kapatin: son sekme kapandiktan
+     10 saniye sonra program da kapanir (sayfayi yenilemek programi kapatmaz;
+     bir is surerken tarayici once onay sorar). Siyah pencere program kapaninca
+     kendiliginden kapanir; pencereyi kapatmak da programi durdurur.
+  Pencere iletileri Windows'un goruntuleme dili Turkce ise Turkce, degilse
+  Ingilizcedir. RStudio gerekmez. Gmail ve Outlook, icinde .bat bulunan zip'i
+  e-postada engeller; zip'i Google Drive, WhatsApp vb. ile paylasin.
+  Asagidaki elle kurulum adimlari RStudio ile calismak isteyenler icindir.
+
+--------------------------------------------------------------------------------
+  ELLE KURULMASI GEREKENLER (otomatik GELMEZ)
+--------------------------------------------------------------------------------
+  1) R                                        -> CRAN
+  2) RStudio                                  -> Posit
+  3) Rtools  (admixtools2'yi DERLEMEK icin)   -> CRAN   *** KRITIK ***
+  4) admixtools2 (CRAN'da YOK, GitHub'dan)    -> remotes ile
+  5) Arayuz paketleri                         -> Kurulum.R otomatik kurar
+
+ADIM 1 -- R
+  https://cran.r-project.org/bin/windows/base/ adresinden guncel R'yi kur.
+  (Turkce ve diger diller icin R 4.2 veya YENISI sart.)
+
+ADIM 2 -- RStudio Desktop
+  https://posit.co/download/rstudio-desktop/ adresinden ucretsiz surumu kur.
+
+ADIM 3 -- Rtools  *** ATLAMAYIN ***
+  https://cran.r-project.org/bin/windows/Rtools/
+  R surumune uygun olani sec:  R 4.5 -> Rtools45 | R 4.4 -> Rtools44 | R 4.3 -> Rtools43
+  (R surumu icin Console'a:  R.version.string )
+  Kurduktan sonra RStudio'yu KAPAT ve tekrar AC.
+  Kontrol:  Sys.which("make") != ""   -> TRUE donmeli
+
+ADIM 4 -- admixtools2
+  Console'a sirayla:
+      install.packages("remotes")
+      remotes::install_github("uqrmaie1/admixtools")
+  Ilk kurulum uzun surer (C++ derlenir). "install from sources?" -> Yes.
+  Dogrulama:  requireNamespace("admixtools", quietly = TRUE)   -> TRUE
+
+ADIM 5 -- Program klasoru
+  Temiz bir klasor ac (orn. C:\qpadm\) ve 3 dosyayi oraya kopyala.
+
+ADIM 6 -- Arayuz paketleri
+  RStudio'da "qpAdm Studio v6.4 Installation.R" dosyasini ac ve "Source" tusuna bas.
+  Kurulanlar: shiny, bslib, DT, shinyFiles, openxlsx, digest, callr, ggplot2,
+  ggpubr, patchwork, scales, ragg, cowplot
+  (rlang guncellemesi istenirse bunu RStudio'da DEGIL, duz Rgui'de yap.)
+
+ADIM 7 -- Calistirma
+  Session > Set Working Directory > Choose Directory... (program klasorunu sec)
+  Console'a:
+      app <- source("qpAdm Studio v6.4.R", encoding = "UTF-8")$value
+      shiny::runApp(app)
+  Program varsayilan olarak tarayicida acilir: port 7654; o port baska bir
+  programca kullaniliyorsa 7655-7699 arasindaki ilk bos port (v6.4). Programi
+  kapatmak icin programdaki "Programi kapat" dugmesi ya da RStudio'da Stop.
+  "Run App" dugmesini kullanmak istersen dosya adini app.R yap.
+
+  TELEFONDAN (ayni Wi-Fi agindaki bilgisayar uzerinden):
+      shiny::runApp(app, host = "0.0.0.0", port = 7654)
+  Bilgisayarin IP'sini ogren (ipconfig) ve telefonda http://192.168.x.x:7654 ac.
+  Not: dosya secme pencereleri telefondan calismaz.
+
+VERI DOSYALARI
+  PLINK (.bed/.bim/.fam) veya EIGENSTRAT (.geno/.snp/.ind).
+  "Genotip prefix sec" ile uzantisiz prefix'i secersin.
+
+DIL SECIMI
+  Ust menude "Dil / Language" sekmesi (Yardim'dan hemen once). 15 dil:
+  Turkce, English, 中文, हिन्दी, Espanol, Francais, العربية, বাংলা, Portugues,
+  Русский, اردو, Deutsch, 日本語, 한국어, Bahasa Indonesia.
+  Secim aninda tum arayuz, bildirimler ve Excel/RAW cikti basliklari degisir.
+
+SIK KARSILASILAN SORUNLAR
+  * "there is no package called 'admixtools'": ADIM 4 yapilmamis.
+  * derleme hatasi / "make not found": Rtools yok -> ADIM 3.
+  * "input string invalid UTF-8": RStudio > File > Reopen with Encoding > UTF-8.
+  * "unused argument" gibi tuhaf hatalar: RStudio eski .RData yukluyor olabilir.
+      Tools > Global Options > General: "Restore .RData" KAPAT, "Save workspace" Never.
+      Klasordeki .RData dosyasini sil ve RStudio'yu yeniden baslat.
+  * allsnps=FALSE'da "extract_f2 basarisiz": Veri sekmesinde maxmiss'i artir (0.3-1).
+  * Rotasyonda allsnps=TRUE cok yavassa: hizli deneme icin FALSE kullan.
+  * Windows dosya penceresi gorunmuyor: pencere 1-2 saniye icinde en ustte
+      acilir. PowerShell calistirilamiyorsa program bunu bildirir ve kendi
+      dosya penceresini acar. Bir pencere zaten aciksa ikincisi acilmaz
+      ("zaten acik" uyarisi); acik pencereyi kapatin.
+  * ONEMLI -- ZIP ICINDEN CALISTIRMA: Dosyayi ZIP'ten CIKARMADAN calistirma.
+      Yanlis:  C:/qpadm/qpAdm Studio v6.4.zip/qpAdm Studio v6.4.R
+      Dogru :  ZIP'i sag tik > "Tumunu ayikla" ile C:/qpadm/ icine cikar, sonra
+               C:/qpadm/qpAdm Studio v6.4.R dosyasini calistir.
+      ZIP icinden calistirinca R dosyayi dogru kodlamayla okuyamaz ve
+      "invalid UTF-8" uyarilari ile Turkce karakterler bozulur.
+  * ONEMLI -- RSTUDIO KODLAMASI (UTF-8) VE DOSYANIN BOZULMASI
+      Belirti: RStudio'da program dosyasinda "Türkçe" yerine "TC<rkC'e" gibi
+      bozuk karakterler ve LANGS <- c( satirinda "unmatched opening bracket"
+      uyarisi. Hata kodda degil: RStudio dosyayi UTF-8 yerine yanlis
+      kodlamayla okumustur.
+      Onlem:
+        1) Tools > Global Options > Code > Saving > Default text encoding: UTF-8.
+        2) Ayni yerdeki otomatik kaydetme secenegi aciksa kapat.
+        3) Bozuk karakter gorursen KAYDETME (Ctrl+S yapma). Dosyayi
+           File > Reopen with Encoding > UTF-8 ile yeniden ac
+           ("Set as default encoding" isaretli).
+        4) Program dosyasi RStudio'da acikken klasordeki dosyanin ustune yeni
+           surum kopyalama; once .R sekmesini kapat. Dosya acikken disaridan
+           degisirse RStudio onu kendiliginden yeniden yukler; bozulmanin en
+           olasi tetikleyicisi budur (kesin dogrulanmadi).
+      Program dosyayi source(..., encoding = "UTF-8") ile diskten okur:
+      diskteki dosya saglam oldugu surece editordeki bozuk gorunum programin
+      calismasini etkilemez. Asil risk bozuk gorunumun KAYDEDILMESIDIR; dosya
+      kisalir ve program acilmaz. Boyle olursa dosyayi ZIP'ten yeniden cikar.
+
+
+--------------------------------------------------------------------------------
+  v6.4 NOTLARI
+--------------------------------------------------------------------------------
+  - Yeni paket YOK, yeni ozellik YOK: v6.4 test'in iyilestirmeleri.
+  - PANELDE "0" ALLELI: panelde allel "0" (bilinmeyen) olan SNP'lerde ek
+    setlerin getirdigi allel uzlastirilir. Bu uzlasma modelin kendi
+    etiketleriyle (allsnps=TRUE) ya da f2 havuzunun etiketleriyle
+    (allsnps=FALSE) yapilir; sonuc setlerin eklenme sirasina bagli degildir.
+    Toplam ikiden fazla farkli allel cikan SNP'de yeni allel tasiyan
+    etiketler o SNP'de eksik sayilir. Konsolda "allele reconciliation"
+    satiri sayilari yazar.
+  - Ek set etiketli f2 havuzlari yalniz ayni ek setler ve ayni bireylerle
+    yeniden kullanilir. Set imzasina .bed dosyasindan alinan ornekler de
+    girer (ayni boyut ve tarihle degisen .bed fark edilir).
+  - admixtools surumu ve commit'i ciktilara yazilir (RAW, model Excel'i,
+    toplu Excel, konsol); dogrulanan commit (2f6957a) degilse not dusulur.
+    Ek set frekans onbellegi admixtools surumuyle anahtarlanir.
+  - Gecis: v6.4 test'te kurulmus ek setli f2 havuzlari ve "f2cache\afs_cache"
+    kayitlari ilk kosuda bir kez yeniden kurulur. Ek setsiz havuzlar etkilenmez.
+  - HAM KIT: build dogrulanamazsa (kitte rsID'si panelde olan satir 1000'den
+    az) kart sari olur. Panelle allel uyumsuzlugu %1'i asarsa sari, %10'u
+    asarsa kirmizi (kit eklenmez; buyuk olasilikla yanlis build ya da yanlis
+    panel). Kitin yan dosyasina (_kit.txt) build_verified,
+    allele_mismatch_rate, duplicate_positions yazilir.
+  - .bim'i panelinkinden farkli ek setlerde kartta kromozom uyusmazligi (o
+    SNP'ler kullanilmaz), konum farki ve palindromik SNP sayilari yazar.
+  - PORT: 7654 doluysa 7655-7699 arasindaki ilk bos port kullanilir; calisan
+    kopyanin portu program klasorundeki qps_port.txt'de durur ve "qpAdm Studio
+    BASLAT.bat" once ona bakar.
+  - KAPATMA: ust cubukta "Programi kapat" dugmesi (calisan is varsa onay
+    sorar; arka plandaki isleri de durdurur). Bir is surerken sekmeyi
+    kapatmak ya da yenilemek once tarayicinin onayini ister. .bat ile
+    acildiysa son sekme kapandiktan 10 saniye sonra program da kapanir;
+    RStudio'dan calistirildiysa sekmeyi kapatmak programi kapatmaz.
+  - KALAN SURE: rotasyon, f-istatistikleri, qpGraph, FST ve Panel
+    cubuklarinda olculebilir asamalarda (model sayaci, f2 bloklari, SNP
+    okuma) "bu asama icin kalan ~mm:ss" yazar.
+
+--------------------------------------------------------------------------------
+  v6.4 test NOTLARI
+--------------------------------------------------------------------------------
+  - Yeni paket YOK. Yeni: "qpAdm Studio BASLAT.bat" (yukarida KOLAY KURULUM).
+  - EK SETLER (birlestirmesiz modelleme): Veri sekmesinde "Ek setler (kit /
+    makale seti)" alani. Panelle ayni SNP duzenine sahip PLINK setleri (or.
+    Adna Merge Studio N1 ciktisi, makale setleri) diskte birlestirilmeden
+    modele girer. Her set icin renkli kart: yesil uyumlu; sari uyari (dusen
+    SNP, onek verilen etiket, ayni birey); kirmizi uyumsuz (set tek basina
+    duser, gerekce tek satir). Ek set etiketleri secicilerde "◇ set"
+    isaretiyle gorunur. qpAdm (tek, toplu, sirali, on tanimli model,
+    rotasyon) allsnps=FALSE ve allsnps=TRUE ile calisir. f-istatistikleri,
+    qpGraph, FST ve Panel ek set etiketiyle henuz calismaz; dugme gerekceyi
+    yazar.
+  - HAM KIT: ayni alana MyHeritage / AncestryDNA / 23andMe / FTDNA ham
+    dosyasi (.txt/.csv/.zip/.gz) birakilabilir ya da secilebilir. Program
+    kiti panele hizalar (Adna Merge Studio'nun kurali; her kit ayri) ve
+    program klasorundeki "kit_setleri" altina tek bireylik PLINK seti yazar;
+    ayni kit ayni panel icin ikinci kez donusturulmez. Ham dosyaya dokunulmaz.
+    Panel PLINK olmali. VCF icin Adna Merge Studio kullanin. Baska bir panele
+    gecince o panele hizalanmamis kitler kirmizi gorunur; ham kiti yeniden
+    ekleyin (eski panele donunce yine yesil olur).
+  - Ek set diskte degisirse (or. Adna'da ayni adla yeniden uretildi) model
+    calismaz, set yeniden denetlenir; modeli yeniden calistirin. Acilista
+    bulunamayan ek set (or. takili olmayan disk) kirmizi kartla listede kalir.
+  - Ek setli kosularda panel etiketlerinin allel frekanslari
+    "f2cache\afs_cache" altinda saklanir; sonraki kosular hizlanir (en fazla
+    8 GB; en eskiler silinir).
+  - Program varsayilan olarak tarayicida, 7654 portunda acilir:
+    shiny::runApp(app) yeterli.
+  - BASLANGIC PAKETI: Set Yonetimi > On tanimli modeller > "Baslangic paketi"
+    programla gelen hazir modeli (Rum_Turkmen_Zoroastrian_test; AADR v66.p1 2M
+    icin hazirlandi) tek tikla yukler. Veri sekmesinde set secili degilse model
+    listeye eklenir; calistirmak icin once genotip setini secin.
+
+--------------------------------------------------------------------------------
+  v6.3 NOTLARI
+--------------------------------------------------------------------------------
+  - Surum adindaki "test" ibaresi kalkti. v6.3 test ve v6.3 test2'deki her sey
+    (asagidaki notlar) bu surumde var. Yeni paket YOK.
+  - Windows dosya penceresi ("Dosya sec", "Genotip prefix sec", "Harici etiket
+    dosyasi ekle" ve benzerleri) artik tarayicinin ONUNDE, en ustte acilir.
+    Onceden tarayicinin arkasinda acilip gorunmez kalabiliyordu; ikinci
+    tiklamada "Bir dosya penceresi zaten acik" uyarisi cikiyordu. Pencere
+    acikken dugmeye yeniden basarsaniz eski pencere kapanir, yenisi acilir.
+  - allsnps=TRUE kosularinda hedef SNP sayimi kosunun sonunda yapilir (genotip
+    bir kez daha okunur, buyuk sette bir-iki dakika). Sayim surerken sonuc
+    kartinda ve Biriken modeller tablosunda "sayiliyor...", Excel'de ve RAW
+    ciktisinda "counting (not finished)" yazar; sayim bitince deger kendiliginden
+    gelir. Bu sirada indirdiginiz Excel'i sayim bittikten sonra yeniden
+    indirin.
+  - Model Excel'i (Sonuclar > secili modeller > Excel) rcond / matris
+    uyarilarini artik RAW ciktisi ve toplu Excel ile ayni kaynaktan yazar.
+    Onceden admixtools'un "solve(): system is singular" uyarisini gostermeyip
+    "rcond: none" yaziyordu.
+
+--------------------------------------------------------------------------------
+  v6.3 test2 NOTLARI
+--------------------------------------------------------------------------------
+  - Yine bir TEST surumudur: v6.3 test uzerine saha duzeltmeleri. Yeni paket
+    YOK.
+  - ON TANIMLI MODEL DOSYASI artik ".qpAdm.txt" uzantisiyla kaydedilir
+    (".qpadm" bircok mesajlasma uygulamasinda paylasilamiyordu). Eski .qpadm
+    dosyalari acilmaya devam eder. Windows bilinen uzantilari gizledigi icin
+    Gezgin'de dosya "X.qpAdm" gorunur; cift tiklayinca Not Defteri'nde acilir.
+    Uygulama dosyanin adini degistirse de (ornegin "model (1).txt") program
+    dosyayi icerigindeki bicim satirindan tanir. Etiket dosyasi alanina
+    birakilan model dosyasi etiket diye okunmaz, tek satir bilgiyle atlanir.
+  - allsnps=TRUE kosularinda "Target SNPs" artik doluyor (v6.0'dan beri bos
+    kaliyordu). Sayim basarisiz olursa konsola tek satir yazilir.
+  - Model Excel'i (Sonuclar > secili modeller > Excel): "Right/Left labels ->
+    sample IDs" tablolari kosunun kendi etiket eslemesiyle yazilir (on tanimli
+    modellerde kosuya ozel etiketler dahil). Referans sonuc yoksa "Reference"
+    satiri yazilmaz. B sutunu en fazla 60 genislikte; uzun ID listeleri tek
+    satirda kalir, sagdaki bos hucrelere tasar.
+  - TGENO bicimli EIGENSTRAT setleri (AADR v66 dagitimi) secilemez: admixtools
+    bu bicimi okumuyor, hatasiz ama yanlis sonuc verirdi. Bu setleri Adna
+    Merge Studio ile PLINK'e cevirip PLINK setini secin.
+
+--------------------------------------------------------------------------------
+  v6.3 test NOTLARI
+--------------------------------------------------------------------------------
+  - Bu bir TEST surumudur. Ozellikler olgunlasinca surum adindaki "test"
+    ibaresi kalkacak.
+  - Yeni paket YOK.
+  - ON TANIMLI MODELLER (.qpadm). Bir .qpadm dosyasi birden cok qpAdm
+    modelini tasir; her modelin Left, Right ve istege bagli Target
+    populasyonlari SAMPLE ID ile tanimlidir. Amac tak-calistir: dosyayi
+    yukle, calistir.
+    * Yukleme: Set Yonetimi > "On tanimli modeller" sekmesi. "Dosya sec
+      (.qpadm)" (Windows dosya penceresi), surukle-birak alani (Windows
+      Gezgini'nden; birden cok dosya olabilir) veya "Panodan yapistir".
+      Once Veri sekmesinde genotip seti secilmis olmali; secilmemisse
+      modeller listeye girer, set secilince durumlari hesaplanir.
+    * Dosya yuklenince program Model sekmesine gecer. Populasyonlar kartinin
+      ustunde "On tanimli modeller" karti: model secici (< >), durum satiri,
+      kip secimi ve Calistir dugmesi. Secilen model kutulara (Target / Left /
+      Right) yuklenir.
+    * Sample ID esasli calisma: dosyadaki etiket adlari yuklu setin
+      etiketleriyle ayni olmak zorunda degil. Program her model icin
+      bireyleri sample ID'lerinden bulur; etiketler uyusmuyorsa o kosu icin
+      kendi sanal etiketlerini kurar. Setin dosyalarina ve Sanal etiket
+      listenize hicbir sey yazilmaz.
+    * Durum renkleri:
+        yesil  hazir.
+        sari   calisir, notlara bakin: veri setinde olmayan sample ID'ler
+               (modelden cikarilir), .anno Master ID ile eslesen bireyler,
+               iki populasyonda birden olan birey (Target > Left > Right
+               onceligiyle tek yerde birakilir), hic bireyi bulunamayan Right
+               populasyonu (dusurulur), gecersiz etiket adi (duzeltilir).
+        kirmizi calisamaz: bireyi bulunamayan Left populasyonu, Left ya da
+               Right yok, Right sayisi Left + 1'den az, ayni etiket iki rolde.
+    * Calistirma: "On tanimli modelleri calistir (N)" secili modelden
+      baslayip listenin sonuna kadar kosar.
+        Otomatik gecis: modeller mudahale gerekmeden sirayla kosar; kirmizi
+          modeller atlanir. Sari model varsa once tek bir onay penceresi
+          acilir: bulunamayan bireyler ve calisamayan modeller gerekceleriyle
+          listelenir. "Mevcut haliyle calistir" (varsayilan) ya da "Kutulara
+          yukle, elle duzenle" (Sirayla kipine gecer). Yalniz .anno ile
+          eslesen ya da iki populasyonda olan birey icin soru sorulmaz.
+        Sirayla: model kutulara yuklenir; istediginiz gibi degistirip
+          calistirirsiniz; bitince sonraki model kutulara gelir.
+    * Kuyruk acikken (calisirken, beklerken ya da durdurulmusken) model
+      secici ve tablodaki sira kilitlidir; once "Kuyrugu bitir".
+    * Durdur: kuyruk durur; Model sekmesindeki kartta "Kutulardaki haliyle
+      calistir", "Devam et (model bastan)", "Sonraki model", "Kuyrugu bitir".
+      ONEMLI: durdurulan model kaldigi bloktan degil, BASTAN kosar. Blok blok
+      devam bu surumde yok; admixtools'un bunu ayni sonucu vererek yapip
+      yapamadigi olculmeden eklenmeyecek.
+    * allsnps: model basina TRUE, FALSE ya da BOTH (ikisi; model iki kez
+      kosar). Belirtilmemisse TRUE. Set Yonetimi tablosunda hucreye cift
+      tiklayip degistirilebilir.
+    * Tek f2 havuzu: ayni sanal etiket duzenini paylasan modellerin
+      allsnps=FALSE kosulari, butun bu modellerin populasyonlarinin
+      birlesimiyle kurulan TEK f2 havuzunu kullanir (genotip bir kez okunur).
+      Sonuclar'daki model notunda bu belirtilir: SNP kumesi modeli tek basina
+      kosmaktan farkli olabilir.
+    * Target: modelde Target yoksa Model sekmesindeki Target kutusu
+      kullanilir (birden cok target secilebilir); modelde varsa modeldeki.
+      Kutudaki bir Target modelin bireyleriyle cakisirsa o model icin atlanir
+      ve bildirilir.
+    * .anno: setin yaninda AADR .anno dosyasi varsa (ya da harici etiket
+      dosyasi olarak eklenmisse) sette bulunamayan sample ID'ler .anno'daki
+      Master ID ile eslestirilir (birden cok aday varsa en cok otozomal SNP'li
+      olan). .anno yoksa bu adim atlanir.
+    * Sonuclar: her sonucun ustunde "On tanimli model" notu; ayrica "On
+      tanimli model ozeti (target x model, p-degeri)" karti ve "Ozeti
+      Excel'e aktar" (Matrix ve Models sayfalari). Toplu Excel'e ve RAW
+      ciktiya model adi ve notlari yazilir. Dosyada referans sonuc gomuluyse
+      karsilastirma yazilir (ayni / farkli: agirliklarda en buyuk fark ve p).
+    * Cokme kurtarma: kuyruk calisirken program ya da bilgisayar kapanirsa
+      bir sonraki acilista "Yarim kalan kuyruk bulundu" bildirimi cikar;
+      Model sekmesinin ustunde: "Kaldigi yerden devam", "Yalniz sonuclari
+      yukle", "Sil". Kayit, calisma klasorundeki qps_pdm_queue.rds dosyasidir;
+      kuyruk normal bitince silinir.
+    * Set Yonetimi > On tanimli modeller tablosu: model adi ve allsnps
+      hucresine cift tiklayip duzenleme (Enter ile kaydedilir); Yukari /
+      Asagi; Model sekmesinde ac; Secilenleri cikar; Listeyi temizle; Kaydet
+      (.qpadm) butun listeyi tek dosyaya yazar (birden cok dosyayi
+      birlestirmek icin); Secilenleri ayri kaydet (bir dosyayi bolmek icin);
+      Panoya kopyala. Ayni model ikinci kez eklenmez; ayni adla farkli
+      icerik "ad (2)" olarak eklenir.
+    * Dosya bilgileri (istege bagli): Dosya adi, Onerilen veri seti (AADR
+      listesinden secilir ya da yazilir), Hazirlayan, Aciklama. Onerilen set
+      yuklu setten farkliysa yalniz bilgi notu cikar; modeller yine calisir.
+    * Model sekmesinde Right satirindaki "On tanimli modellere ekle":
+      kutulardaki modeli listeye ekler (model adi, Target'i de ekle,
+      allsnps, son sonucu referans olarak ekle -- hepsi pencerede secilir).
+      Dosyaya kutulardaki populasyonlarin o anki bireyleri sample ID olarak
+      yazilir; elle yaptiginiz sanal etiket eslemeleri ayrica yazilmaz.
+  - .qpadm DOSYA BICIMI (UTF-8, sekmeyle ayrilmis metin; Excel'de acilip
+    duzenlenebilir; ";" ve "," ayiricilari, BOM ve CRLF de kabul edilir;
+    bilinmeyen satirlar yok sayilir; Excel'in "Unicode metin" (UTF-16) ve
+    Turkce Windows "sekmeyle ayrilmis metin" kayitlari da okunur; sutun
+    adlari icin Group ID / Genetic ID / IID gibi adlar da taninir):
+        #qpadm      1
+        #name       Ornek modeller
+        #dataset    AADR v62.0 1240K
+        #model      M01   allsnps   BOTH
+        model  role    label       sample_id
+        M01    target  Hedef1      I1234
+        M01    left    Anatolia_N  I0001
+        M01    left    Anatolia_N  I0002
+        M01    left    WHG
+        M01    right   Mbuti
+        ...
+    Rol: target, left, right. sample_id bos birakilirsa etiketin yuklu
+    setteki butun bireyleri alinir. Istege bagli besinci sutun master_id
+    (.anno eslemesi icin). #model satirlarinda allsnps (TRUE / FALSE /
+    BOTH), maxmiss, blgsize, note; #ref satirlarinda gomulu referans sonuc.
+
+--------------------------------------------------------------------------------
+  v6.2 NOTLARI
+--------------------------------------------------------------------------------
+  - Yeni paket YOK.
+  - Etiketler: Veri sekmesindeki "Etiket kaynagi sec" KALDIRILDI. Etiketler
+    her zaman yuklu setin kendi .fam/.ind dosyasindan okunur. (v6.1'de ayri
+    secilen kaynak yalniz ekranda gorunen etiketleri degistiriyordu; kosu
+    yine setin kendi etiketleriyle kuruluyordu, bu yaniltici olabiliyordu.)
+    Baska bir dosyanin etiketlerini kullanmak icin "Harici etiket dosyasi
+    ekle" kullanin; AADR .anno dosyalari da eklenebilir.
+  - Eski varsayilan kaydinizda ayri bir etiket kaynagi varsa program ilk
+    acilista bir kez sorar: "Harici etiket dosyasi olarak ekle". Eklenen
+    dosya listeye girer ama kendiliginden etkinlesmez; harici etiketleri
+    Veri sekmesindeki anahtarla siz acarsiniz.
+  - Gelismis etiket duzenleyici: "Secilenleri kaydet (.fam / .ind / .txt)".
+    Yalniz secili bireyler, Guncel etiket sutunundaki etiketle, kaynak
+    dosyadaki cinsiyet/fenotip ve sol listedeki sirayla yazilir. Klasor Tam
+    kopya ile ayni; etkin setin kendi etiket dosyasinin uzerine yazilmaz.
+  - f2 havuzlari: havuz artik kosudaki populasyonlarin gercek iceriginden
+    (populasyon basina sample ID listesi) taninir. Ilgisiz bir sanal etiket
+    eklemek mevcut havuzlari gecersiz kilmaz. v6.1 ve oncesinde kurulan
+    havuzlar eskisi gibi bulunur.
+  - Secim kutulari: kutunun bos yerinden baslayip surukleyerek dikdortgenle
+    secilir. Sag tik artik dogrudan silmez, menu acar: "Kopyala" (secililerin
+    adlari panoya), "Secimden cikar", "Bireylere ayir" (etiketin uzerindeyse).
+  - Sanal etiket eklenince ya da kaldirilinca kutulardaki secimler korunur.
+    Secili bir etiketin icerigini degistiren sanal etiket icin once bir onay
+    penceresi acilir (etkilenen kutular ve etiketler; Uygula / Vazgec).
+    Uygulanirsa: birey eksilen etiket secili kalir; butun bireyleri tek yeni
+    etikete gecen etiketin yerine yeni ad konur; birden cok etikete dagilan
+    etiket secimden cikar.
+  - Sample ID ile bireysel secim (butun kutular, butun kosu turleri): aramada
+    "ID -> etiket" satirini secmek kutuya yalniz o bireyi etiket_sampleID
+    adiyla ekler; etiket satiri etiketin butun bireylerini ekler. Bireysel
+    secilen kisi o kosuda kendi etiket grubundan cikar (grup onsuz kosar,
+    bildirilir). Ayni birey iki kutuda seciliyse kosu baslamaz. Butun
+    bireyleri ayrica secilmis etiket bos kalir ve kosudan duser. Kayitli
+    setlerde bu girdiler etiket_sampleID adiyla saklanir.
+  - Toplu kosu: her model bitince sonucu Sonuclar'a eklenir. Ilk sonuc gelince
+    Sonuclar sekmesi acilir ve o model gosterilir; sonraki modeller listeye ve
+    "Toplu kosu tablosu"na eklenir, ekran degismez. Sonuclar'in ust kartinda
+    "3/10 model bitti" sayaci gorunur. Excel, RAW ve tablo PNG'si o ana kadar
+    bitenlerle alinabilir. Durdur'a basinca biten modeller korunur; kosu
+    beklenmedik bicimde kesilirse de biten modeller kalir.
+  - Rotasyon: tablo modeller bittikce dolar; Durdur bitenleri korur; grafik
+    ve PNG kosu bitince cizilir.
+  - Sirali model (Model sekmesinde Target'in altinda anahtar): ayni Target ve
+    Right ile birden cok Left seti sirayla kosar; her set bir modeldir (M01,
+    M02, ...).
+      * Anahtar acilinca Left kutusundaki secim ilk set olur. "Left seti ekle"
+        kutudaki secimi listeye kopyalar, kutu bosalmaz (bir kaynagi degistirip
+        yeni set eklemek kolay). Ayni set iki kez eklenmez.
+      * Listede her set icin: Left kutusuna yukle, yukari / asagi, sil.
+      * Yalniz tek target ile calisir: birden cok target seciliyken anahtar
+        pasiftir; kip acikken Target'a yeni secim oncekinin yerine gecer ve
+        "Etiketi bireylere ayir" kullanilamaz.
+      * Calistir yalniz listedeki setleri kosar; kutudaki secim listede yoksa
+        dugmenin altinda not cikar. Left ile Right'in kesismesi ve Right'in
+        Left'ten fazla olmasi set basina denetlenir.
+      * Her kosudan once yuk uyarisi: model sayisi ve birlesik populasyon
+        sayisi (target + Left setlerinin birlesimi + Right). allsnps=FALSE'ta
+        butun modeller bu birlesimle kurulan TEK f2 havuzunu kullanir (p
+        degerleri ayni SNP kumesine dayanir). allsnps=TRUE'da genotip her
+        model icin yeniden okunur.
+      * Liste anahtar kapaninca silinmez (program acik kaldikca durur).
+      * Bu kipte Toplu kosu tablosu olusmaz (Left'ler sabit degil). Toplu
+        Excel'de Summary, Weights ve Popdrop'ta her satir bir model;
+        agirliklar "kaynak: agirlik ± SE" bicimindedir.
+  - Toplu kosu tablosu: "Panoya kopyala" tabloyu PNG ile ayni gorsel olarak
+    panoya koyar (Word'e, PowerPoint'e yapistirilabilir). Windows'ta arka
+    planda PowerShell ile; diger sistemlerde tarayicinin pano izniyle.
+  - Gelismis etiket duzenleyici: soldaki birey listesi artik sayfa sayfa
+    gelir; arama, sutun filtreleri ve siralama R tarafinda yapilir. Buyuk
+    setlerde (orn. 27 bin birey) sekmeye gecerken RStudio'nun donmasi
+    giderildi. Aramada sonuc yazmayi biraktiktan yaklasik yarim saniye sonra
+    gelir.
+
+--------------------------------------------------------------------------------
+  v6.1 NOTLARI
+--------------------------------------------------------------------------------
+  - Yeni paket YOK.
+  - Dosya secimi: Veri sekmesindeki "Genotip prefix sec", "Etiket kaynagi
+    sec" ve "Harici etiket dosyasi ekle" dugmeleri Windows'un kendi dosya
+    penceresini acar. Pencere 1-2 saniye icinde, tarayicinin ve diger
+    pencerelerin ustunde acilir. Pencere acikken program calismaya devam
+    eder (surukle-birak dahil); ayni anda tek pencere acilir. Windows
+    disinda ya da pencere acilamazsa programin kendi dosya penceresi acilir.
+  - Her dosya turu (set, etiket kaynagi, harici etiket dosyasi) icin en son
+    kullanilan klasor ayri hatirlanir; pencere oradan acilir.
+  - Surukle-birak: Veri sekmesinde iki kesik cizgili alan vardir.
+      Harici etiket dosyalari: .fam/.ind/.txt dosyalarini Gezgini'nden alana
+      birakin; dosyanin icerigi okunur. Tarayici dosyanin diskteki yerini
+      vermedigi icin listede "disk yolu yok" yazar.
+      Set: .bed/.bim/.fam (ya da .geno/.snp/.ind) dosyalarindan birini alana
+      birakin. Tarayici dosyanin yerini vermez; program ayni ad ve boyuttaki
+      dosyayi daha once actiginiz set klasorlerinde, bunlarin ust
+      klasorlerinde ve bu klasorlerin bir alt duzeyinde arar (dosyanin
+      icerigi okunmaz). Orada yoksa program klasorunu ve ust klasorlerini,
+      surucunun kokunu ve kullanici klasorlerini (Belgeler, Masaustu,
+      Indirilenler) birkac duzey derinlikte tarar. Tek eslesme varsa set
+      yuklenir, birden cok varsa hangisi oldugu sorulur. Hic bulunamazsa
+      dosya penceresi acilir (aranan dosyanin adi pencere basliginda);
+      orada sectiginiz klasor sonraki birakmalarda aranir.
+  - Set Yonetimi > Varsayilanlar (yeni alt sekme):
+      * Varsayilan set: program acilirken kendiliginden yuklenir. "Etkin seti
+        varsayilan yap" o an yuklu seti (ayri bir etiket kaynagi sectiyseniz
+        onu da) kaydeder; "Genotip prefix sec" bir seti yuklemeden varsayilan
+        yapar; "Varsayilani kaldir" siler.
+      * Varsayilan Right / Left seti: Model ve Rotasyon sekmelerinde secili
+        gelir; Right ve Left kutulari ilk acilista bunlarla dolar.
+      * Hatirlanan son klasorler ve "Klasorleri unut".
+    Bunlar program klasorundeki qpadm_defaults_v3.rds dosyasinda, kayitli
+    Right/Left setlerinizle birlikte saklanir. Bu dosyayi yeni surum
+    klasorune kopyalarsaniz setleriniz ve varsayilanlariniz gelir.
+  - Set degistirildiginde etiket kaynagi onceki setin kendi .fam/.ind dosyasi
+    ise yeni setin kendi dosyasina gecer; ayrica sectiginiz bir etiket
+    kaynagi korunur.
+  - Secim kutulari (Target, Left, Right, Set Yonetimi, Rotasyon, FST, Panel,
+    f-istatistikleri, qpGraph ve arama kutusu):
+      * Ctrl+tik ya da Shift+tik ile, ya da bir ogenin uzerinde basili tutup
+        surukleyerek birden cok oge secilir; Delete secilenleri siler.
+      * Secili ogeleri surukleyip baska bir ogenin onune/arkasina birakmak
+        sirayi degistirir (Right'ta ilk pop ve Left sirasi sonucu etkiler).
+      * Sag tik o ogeyi cikarir.
+      * Cift tik ogeyi duzenlemeye acar: oge ayni yerde arama kutusuna doner;
+        yeni bir etiket secilirse o yere girer, secilmezse eski oge geri gelir.
+  - Arama: birden cok sozcukle aramada (ornegin "iran n", "yamnaya samara")
+    sonuclar etiketin bolumlerine (_ . - ile ayrilan parcalar) tam uyan,
+    sozcuklerin yazildigi sirada gectigi ve kisa adlar once gelecek sekilde
+    siralanir; uzun listelerde en iyi eslesmeler artik kesilmez. Etiket ya da
+    sample ID arama kutusunda etiketin kendisi uyelerinin satirlarindan once
+    gelir.
+  - Model > Target: "Etiketi bireylere ayir" anahtari. Acikken Target'taki
+    ve Target'a eklenen etiketler kutuda bireylerine acilir; her birey ayri
+    bir hedeftir, adi etiket_sampleID (ornegin
+    Russia_Samara_EBA_Yamnaya_I0231.AG). Istemediginiz bireyi (ornegin ayni
+    kisinin .SG kopyasini) sag tikla cikarin. Anahtari kapattiktan sonra
+    eklediginiz etiketler grup olarak kalir; boylece ayni secimde gruplar ve
+    bireyler birlikte olabilir. Cikardiginiz bir bireyi geri almak icin
+    etiketi anahtar acikken yeniden ekleyin. Bireyler etiketin o anki
+    uyeleridir (sanal etiketler uygulanmis). Kosu icin gecici sanal etiketler
+    kurulur; orijinal dosyalar, sanal etiket listesi ve etiket listeleri
+    degismez. Diske yazilamayan ya da baska bir etiketle cakisan ad
+    degistirilir ve bildirilir. Bir bireyin ozgun etiketi Left ya da
+    Right'ta ise kosu baslamaz.
+  - Target'ta bireysel girdi varken her kosudan once yuk uyarisi cikar
+    ("Devam et" ya da "Vazgec"); sinir yoktur, kosu Durdur ile kesilebilir:
+      allsnps=FALSE: f2 havuzu hedefler + Left + Right ile kurulur; pencerede
+      extract_f2'nin isi bolmeden istedigi bellek ve havuzun disk yeri
+      yazar. Bellek pop sayisinin karesiyle buyur.
+      allsnps=TRUE : genotip dosyasi her hedef icin yeniden okunur; pencerede
+      hedef basina kaba sure ve toplam yazar (olcum: 14,4 GB'lik .bed'de bir
+      hedef 4,7 dk).
+  - Sonuclar > "Toplu kosu tablosu" (yeni kart): gosterilen modelin toplu
+    kosusu tek tabloda. Satirlar hedefler, sutunlar Left etiketleri (dik
+    basliklar), ardindan p, chisq ve feasible. Hucrede agirlik, altinda se ve
+    z; negatif agirlik kirmizi, hata veren hedefte ERROR. Her Left sutununun
+    kendi rengi vardir; agirlik yukseldikce renk koyulasir.
+      * Basliga tiklamak o sutuna gore azalan, ikinci tik artan siralar; hata
+        veren ve bos degerler hep sonda kalir.
+      * Tablo karta sigacak sekilde yazi boyutunu kendisi kucultur.
+      * "Tabloyu PNG kaydet" tabloyu ekrandaki sirayla kaydeder
+        (qpadm_batch_<kosu>_<tarih>.png). Klasor kartin "Kayit klasoru"
+        dugmesiyle secilir; secilmezse grafik kartindaki klasor kullanilir.
+  - Grafik basliginda chisq'in yaninda "SNP Used": Sonuclar kutusundaki
+    "Kullanilan SNP" ile ayni sayi (f2 havuzunda ust sinirsa "<=" ile).
+  - Konsol kutusunun yer tutucusu ve qpAdm ilerleme asamalari secili dilde.
+  - f-istatistikleri ve qpGraph ilerleme cubuklarinda gecen sure gorunur.
+
+--------------------------------------------------------------------------------
+  v6.0 NOTLARI
+--------------------------------------------------------------------------------
+  - Yeni paket YOK.
+  - Konsol: admixtools'un blok ilerlemesi ("block 1 out of 713" ...) artik
+    tek satirda gorunur; konsol yeni satirla birlikte en alta kayar (yukari
+    kaydirdiysaniz yerinde kalir). Her model bitince R oturumu gibi okunur bir
+    dokum yazilir: cagri, agirliklar ve TUM nested modeller (popdrop), tam
+    hassasiyetli p. Durdurma, bitis suresi, hatalar, rotasyon, FST, f2 havuzu ve
+    sanal etiket islemleri de konsola duser. Konsol satirlari ve indirilen
+    konsol dosyasi sabit Ingilizcedir (dosya adi: qpadm_console_<zaman>.txt).
+  - Konsol komutlari: qps_status() (veri seti, havuz, kosu durumu),
+    qps_grep("desen") (etiket arama).
+  - Sonuclar: ozet kartindaki "Gosterilen model" secicisi kutulari, agirliklari,
+    popdrop'u, right setini, etiket eslemesini, grafigi, RAW'u ve toplu Excel'i
+    birlikte degistirir. Toplu kosuda artik her hedefin ozeti ve popdrop'u
+    gorulebilir; eski bir model secilince RAW o kosunun ANINDAKI sanal etiketleri
+    ve etiket eslemesini yazar. Kaynak sayisi kutusu; negatif agirlik kirmizi;
+    "Right setini kopyala" dugmesi.
+  - Model: Right sayisi Left sayisindan buyuk degilse kosu baslamaz (rank testi
+    en az Left + 1 Right ister). Metinden yapistirmada "Tumunu degistir" ve canli
+    sayac. Veri sekmesindeki etiket tablosunda +Target / +Left / +Right.
+  - Ilerleme cubuklari gecen sureyi gosterir; allsnps=TRUE'da blok asamasinda
+    hedef icin kalan sure tahmini (~). Rotasyon ilerlemesinde kaynak adlari.
+  - Rotasyon: tek kaynakli modeller artik Flegontova filtresinden gecebilir
+    (nested model ve agirlik araligi kosullari tek kaynakta bos sayilir); cok
+    kaynakli modelde popdrop yoksa model basarisiz kalir. Uyumlanamayan modellerin
+    hatalari loga duser.
+  - FST: tablonun ustunde ve Excel'in "Parameters" sayfasinda kullanilan ayarlar
+    (adjust_pseudohaploid, auto_only, maxmiss, blgsize); ayar degisince "tablo
+    onceki ayarlarla" uyarisi. Tek ornekli pseudohaploid popda
+    adjust_pseudohaploid acikken alinan hatada aciklama.
+  - SNP sayilari: Ozet'te "Kullanilan SNP" ve "Hedef SNP" kutulari; toplu
+    kosunun her hedef basliginda, biriken modeller tablosunda, Excel'de (model
+    sayfasi ve toplu Summary: Used_SNPs, Used_SNPs_min, Used_SNPs_max, SNP_basis,
+    Target_SNPs), RAW'da ve konsolda.
+      allsnps=TRUE : her f4 istatistigi farkli SNP kullanir; kutuda bunlarin
+                     ortalamasi, altinda en kucuk – en buyuk.
+      allsnps=FALSE: f2 havuzunun SNP sayisi. maxmiss > 0 ise "<=" (ust sinir:
+                     her cift kendi eksiksiz SNP'lerini kullanir).
+    Hedef SNP = hedefin verisi olan SNP sayisi (otozomlar). allsnps=FALSE'da
+    havuzdan aninda okunur. allsnps=TRUE'da bir hedef ILK kez kosulurken qpAdm
+    bittikten sonra "Hedef SNP sayiliyor" asamasi gelir: genotip dosyasi bir kez
+    daha okunur (buyuk sette birkac dakika; suresi konsola yazilir). Sonuc
+    f2cache klasorundeki qps_target_snps.rds dosyasinda saklanir; ayni hedef
+    (ayni bireyler, ayni dosya) sonraki kosularda yeniden okunmaz.
+  - Arka plan loglari: hata akisi (stderr) standart cikti ile birlestirildi;
+    onceden ayni dosyaya iki ayri akis yazildigi icin bazi satirlar eziliyordu.
+  - Harici sanal etiket: Veri sekmesinde birden cok .fam/.ind/.txt dosyasi ayni
+    anda eklenebilir. "Harici etiket dosyalari" kartinda dosyalarin sirasi
+    onceligi belirler (Yukari / Asagi); her dosya etkin ya da pasif yapilabilir.
+    Ayni sample ID dosyalarda farkli etiketle geciyorsa "Dosyalar arasi
+    cakismalar" tablosunda satir secip baska bir dosyanin etiketini ya da
+    "Orijinal etiket kalsin"i secebilirsiniz; dosya eklenirken cakisma varsa
+    oncelik sorulur. Harici etiketler acikken listede bir degisiklik yapilirsa
+    anahtar kapanir; yeni haliyle kullanmak icin yeniden acin. Arka planda analiz
+    calisirken liste degistirilemez. Ayni yeni ad birden cok dosyada geciyorsa
+    ya da setteki bir etiketle ayniysa bilgi kutusu cikar. overlap.txt dosya
+    listesini (md5 ile) ve dosyalar arasi cakismalari, RAW raporu da kosu
+    anindaki dosyalari yazar. Orijinal dosyalariniz degismez.
+
+--------------------------------------------------------------------------------
+  v5.9 NOTLARI
+--------------------------------------------------------------------------------
+  - Yeni paket YOK.
+  - Sonuclar > Grafik: biriken modellerden secim kutusu. Grafik secili modeli
+    gosterir; PNG adi GOSTERILEN modelden gelir:
+        qpadm_<no>_<hedef>_<T|F>_<calistirma zamani>.png
+    Biriken modeller tablosunda coklu secim + "Secilenlerin grafiklerini PNG
+    kaydet": her model icin ayri dosya (klasor ve cozunurluk Grafik bolumunden).
+  - Set Yonetimi > Sanal etiket: "Sanal etiketleri disa aktar" karti. Elle ve
+    harici sanal etiketlerin tumu ya da bir kismi; iki sutunlu .txt her zaman,
+    .ind kaynakta cinsiyet varsa, .fam kaynakta cinsiyet + fenotip varsa.
+    Dosya yalnizca secilen bireyleri tasir: harici sanal etiket dosyasi olarak
+    yeniden yuklenir, genotip setinin .fam/.ind dosyasinin yerine KONAMAZ.
+  - Sanal etiket ozeti artik kurallarin eklenme sirasindan bagimsiz ve setin
+    etiket dosyasinin (.fam/.ind) parmak izini tasir: etiket dosyasi degisirse
+    eski f2 havuzu kullanilmaz. Sanal etiketli eski gecici klasorler
+    (.qpadm_vfam) ve f2 havuzlari bir kez yeniden kurulur; eskileri Set
+    Yonetimi'ndeki temizleme dugmesiyle silebilirsiniz.
+  - Etiket adi kurali: bosluk ve \ / : * ? " < > | kullanilamaz, ad nokta ya
+    da boslukla bitemez (f2 havuzu etiketleri klasor adi olarak yazar; ornegin
+    Hatti/Hittite havuz kurulumunu dusurur). Harici dosyada boyle bir etiket
+    varsa "Onerilen adlari uygula" dugmesi cikar.
+  - Disa aktarma artik klasor secici ile yapilir; ayni adli dosya varsa onay
+    istenir.
+  - Set Yonetimi > Gelismis etiket duzenleyici (yeni alt sekme):
+      * Soldaki listede setin .fam/.ind dosyasindaki tum bireyler dosya
+        sirasiyla. Kutucuk tek tek secer; etikete tiklamak o etiketteki tum
+        bireyleri secer, tekrar tiklamak hepsini kaldirir. Secilenler sagdaki
+        listeye gecer; sagdaki x tek tek kaldirir.
+      * Sagda "Yeni etiket" + "Etiketi uygula": secilenlere toplu etiket.
+        Degisiklik once BEKLEYEN olarak isaretlenir (Durum sutununda kalem).
+        Sample ID hicbir kosulda degismez; yalnizca etiket degisir.
+      * Cikti 1 -- "Sanal etikete aktar": bekleyenler sanal etiket kurali olur
+        (kaynak: gelismis); setin dosyasi degismez.
+      * Cikti 2 -- "Tam kopyayi kaydet": setin .fam/.ind dosyasi ayni satirlar
+        ve ayni sirayla, setin dosya adiyla, secilen klasore yazilir; yalnizca
+        etiket alani degisir. Setin kendi klasoru secilirse uzerine yazma
+        uyarisi cikar, onaylanirsa eski dosya zaman damgali yedek olarak
+        birakilir, etiketler yeniden yuklenir ve f2 havuzlari yeni etiketlerle
+        yeniden kurulur. Arka planda analiz calisirken setin kendi dosyasi
+        degistirilemez.
+      * "Paneldeki setten bagimsiz etiket duzenleme": bir veya birden cok
+        .fam/.ind/.txt dosyasi; yuklu set ve analizler etkilenmez, yalnizca
+        dosya uretilir. Dosya sirasi onceliktir (Yukari/Asagi); ayni sample ID
+        dosyalarda farkli etiketle geciyorsa hangi dosyanin oncelikli olacagi
+        sorulur, Cakismalar sekmesinde satir bazinda degistirilebilir. Benzer
+        ID'ler sekmesi (Adna merge studio kurallari) yalnizca bilgi verir.
+        Cikti: iki sutunlu etiket dosyasi (.txt) ve referans dosyanin
+        (.fam/.ind) tam kopyasi.
+
+--------------------------------------------------------------------------------
+  v5.8 NOTLARI
+--------------------------------------------------------------------------------
+  - Yeni paketler: plotly, htmlwidgets (qpGraph > Duzenleyici icin). Installation.R
+    bunlari otomatik kurar. Kurulu degilse program yine acilir; yalnizca
+    Duzenleyici alt sekmesinde kurulum mesaji gorunur.
+  - admixtools surumu: eski surumlerde onceden hesaplanmis f2 klasoruyle bazi
+    fonksiyonlar "unused argument" hatasi veriyordu. v5.8 diziyi kendisi kurarak
+    bunu sizin surumunuzden bagimsiz hale getirir; guncelleme ZORUNLU DEGIL.
+    Surumunuzu gormek icin Console'a:  packageVersion("admixtools")
+  - f2 havuzlari "f2cache" klasorunde durur. Program, genotip secildiginde o set
+    icin en son kurulan havuzu otomatik olarak aktif panel yapar.
+
+################################################################################
+#  B) ENGLISH
+################################################################################
+
+Three files in the folder:
+  - qpAdm Studio v6.4.R         -> the program itself (single file)
+  - qpAdm Studio v6.4 Installation.R -> script that installs the interface packages
+  - qpAdm Studio v6.4 Installation.txt -> this guide
+
+--------------------------------------------------------------------------------
+  EASY INSTALL AND START: "qpAdm Studio BASLAT.bat" (from v6.4 test on)
+--------------------------------------------------------------------------------
+  "qpAdm Studio BASLAT.bat" is inside the share zip; nothing else needs to
+  be downloaded.
+  1) Extract the zip into a folder (right-click > Extract All).
+     "qpAdm Studio BASLAT.bat" must sit next to "qpAdm Studio v6.4.R" (it does
+     after extraction).
+  2) Double-click "qpAdm Studio BASLAT.bat". If Windows shows a security
+     warning, choose "Run" (or "More info" > "Run anyway").
+  3) On the first run, in order:
+       [1/5] the program file is found;
+       [2/5] R is looked for; if it is missing (or older than 4.3), R 4.5.1
+             is downloaded and installed in your user folder (no
+             administrator rights needed);
+       [3/5] missing packages are installed (may take 5-15 minutes);
+       [4/5] admixtools is installed and its functions are checked: a
+             ready-made Windows package is tried first; otherwise the Rtools
+             matching your R is downloaded (Rtools45 for R 4.5, about 450 MB)
+             and admixtools is built from source (10-20 minutes);
+       [5/5] the program opens in the browser (port 7654; if another
+             program uses that port, the first free port between 7655 and
+             7699; the window says which).
+     Each step prints its message in the window; long steps say so.
+  4) Later runs only check and start the program; if the program is already
+     running, it is just opened in the browser.
+  5) To stop the program, press "Close the program" in the program's top bar
+     or close the browser tab: the program stops 10 seconds after the last
+     tab is closed (reloading the page does not stop it; while a job is
+     running, the browser asks first). The black window closes by itself
+     when the program stops; closing the window also stops the program.
+  The window messages are in Turkish if the Windows display language is
+  Turkish, otherwise in English. RStudio is not needed. Gmail and Outlook block
+  e-mails whose zip contains a .bat file; share the zip via Google Drive,
+  WhatsApp or similar. The manual steps below are for those who prefer to work
+  in RStudio.
+
+--------------------------------------------------------------------------------
+  MUST BE INSTALLED MANUALLY (these do NOT come automatically)
+--------------------------------------------------------------------------------
+  1) R                                          -> CRAN
+  2) RStudio                                    -> Posit
+  3) Rtools  (needed to COMPILE admixtools2)    -> CRAN   *** CRITICAL ***
+  4) admixtools2 (NOT on CRAN, from GitHub)     -> via remotes
+  5) Interface packages                         -> installed by Kurulum.R
+
+STEP 1 -- R
+  Install the current R from https://cran.r-project.org/bin/windows/base/
+  (R 4.2 or NEWER is required for correct display of non-ASCII languages.)
+
+STEP 2 -- RStudio Desktop
+  Install the free edition from https://posit.co/download/rstudio-desktop/
+
+STEP 3 -- Rtools  *** DO NOT SKIP ***
+  https://cran.r-project.org/bin/windows/Rtools/
+  Match your R version:  R 4.5 -> Rtools45 | R 4.4 -> Rtools44 | R 4.3 -> Rtools43
+  (Check your version with:  R.version.string )
+  After installing, CLOSE and REOPEN RStudio.
+  Verify:  Sys.which("make") != ""   -> should return TRUE
+
+STEP 4 -- admixtools2
+  In the Console, one line at a time:
+      install.packages("remotes")
+      remotes::install_github("uqrmaie1/admixtools")
+  The first install takes a while (C++ is compiled). Answer "Yes" to
+  "install from sources?".
+  Verify:  requireNamespace("admixtools", quietly = TRUE)   -> TRUE
+
+STEP 5 -- Program folder
+  Create a clean folder (e.g. C:\qpadm\) and copy all three files into it.
+
+STEP 6 -- Interface packages
+  Open "qpAdm Studio v6.4 Installation.R" in RStudio and press "Source".
+  It installs: shiny, bslib, DT, shinyFiles, openxlsx, digest, callr, ggplot2,
+  ggpubr, patchwork, scales, ragg, cowplot
+  (If it asks you to update rlang, do that in plain Rgui, NOT in RStudio.)
+
+STEP 7 -- Running the app
+  Session > Set Working Directory > Choose Directory... (pick the program folder)
+  Then in the Console:
+      app <- source("qpAdm Studio v6.4.R", encoding = "UTF-8")$value
+      shiny::runApp(app)
+  The program opens in the browser by default: port 7654; if another program
+  uses that port, the first free port between 7655 and 7699 (v6.4). To stop
+  the program, use "Close the program" in the program, or Stop in RStudio.
+  If you prefer the "Run App" button, rename the file to app.R.
+
+  FROM A PHONE (via a computer on the same Wi-Fi):
+      shiny::runApp(app, host = "0.0.0.0", port = 7654)
+  Find the computer's IP (ipconfig) and open http://192.168.x.x:7654 on the phone.
+  Note: the file-picker dialogs do not work from the phone.
+
+DATA FILES
+  PLINK (.bed/.bim/.fam) or EIGENSTRAT (.geno/.snp/.ind).
+  Use "Choose genotype prefix" and select the prefix without its extension.
+
+LANGUAGE
+  Top menu, "Language" tab (right before Help). 15 languages:
+  Turkce, English, 中文, हिन्दी, Espanol, Francais, العربية, বাংলা, Portugues,
+  Русский, اردو, Deutsch, 日本語, 한국어, Bahasa Indonesia.
+  The whole interface, notifications and Excel/RAW output headers switch at once.
+
+COMMON PROBLEMS
+  * "there is no package called 'admixtools'": STEP 4 was not done.
+  * compile error / "make not found": Rtools missing -> STEP 3.
+  * "input string invalid UTF-8": RStudio > File > Reopen with Encoding > UTF-8.
+  * odd errors such as "unused argument": RStudio may be restoring an old .RData.
+      Tools > Global Options > General: turn OFF "Restore .RData", set
+      "Save workspace" to Never, delete .RData in the folder, restart RStudio.
+  * "extract_f2 failed" with allsnps=FALSE: raise maxmiss (0.3-1) on the Data tab.
+  * Rotation with allsnps=TRUE is slow with many models: use FALSE for quick tests.
+  * The Windows file dialog does not show: it opens on top within 1-2
+      seconds. If PowerShell cannot be run, the program says so and opens its
+      own file dialog. If a dialog is already open a second one is not opened
+      ("already open" warning); close the open dialog.
+  * IMPORTANT -- DO NOT RUN FROM INSIDE THE ZIP. Extract it first.
+      Wrong:  C:/qpadm/qpAdm Studio v6.4.zip/qpAdm Studio v6.4.R
+      Right:  right-click the ZIP > "Extract All" into C:/qpadm/, then run
+              C:/qpadm/qpAdm Studio v6.4.R
+      Running from inside the ZIP prevents R from reading the file with the
+      correct encoding ("invalid UTF-8" warnings, broken characters).
+  * IMPORTANT -- RSTUDIO ENCODING (UTF-8) AND FILE CORRUPTION
+      Symptom: the program file in RStudio shows garbled characters such as
+      "TC<rkC'e" instead of "Türkçe" and an "unmatched opening bracket" warning
+      on the LANGS <- c( line. The code is not at fault: RStudio read the file
+      with a wrong encoding instead of UTF-8.
+      Prevention:
+        1) Tools > Global Options > Code > Saving > Default text encoding: UTF-8.
+        2) If the auto-save option in the same place is on, turn it off.
+        3) If you see garbled characters, do NOT save (no Ctrl+S). Reopen the
+           file with File > Reopen with Encoding > UTF-8
+           (tick "Set as default encoding").
+        4) Do not copy a new version over the program file while it is open in
+           RStudio; close the .R tab first. When an open file changes on disk,
+           RStudio reloads it automatically; this is the most likely trigger
+           of the corruption (not verified).
+      The program reads the file from disk with source(..., encoding = "UTF-8"):
+      as long as the file on disk is intact, a garbled editor view does not
+      affect the program. The real risk is SAVING the garbled view; the file
+      gets truncated and the program no longer starts. If that happens,
+      extract the file again from the ZIP.
+
+--------------------------------------------------------------------------------
+  v6.4 NOTES
+--------------------------------------------------------------------------------
+  - No new packages, no new features: improvements over v6.4 test.
+  - "0" ALLELES IN THE PANEL: at SNPs where the panel has allele "0"
+    (unknown), the allele brought by the extra sets is reconciled. This uses
+    the model's own labels (allsnps=TRUE) or the labels of the f2 pool
+    (allsnps=FALSE); the result does not depend on the order in which the
+    sets were added. At a SNP where more than two different alleles turn up
+    in total, the labels that carry a new allele count as missing at that
+    SNP. The console line "allele reconciliation" gives the counts.
+  - f2 pools with extra-set labels are reused only with the same extra sets
+    and the same individuals. The set signature also includes samples taken
+    from the .bed file (a .bed that changes with the same size and date is
+    noticed).
+  - The admixtools version and commit are written to the outputs (RAW, model
+    Excel, batch Excel, console); if the commit is not the validated one
+    (2f6957a), a note is added. The extra-set frequency cache is keyed by the
+    admixtools version.
+  - Upgrade: f2 pools with extra sets and "f2cache\afs_cache" entries made
+    by v6.4 test are rebuilt once, on the first run. Pools without extra sets
+    are not affected.
+  - RAW KITS: if the build cannot be verified (fewer than 1000 kit rows have
+    an rsID found in the panel), the card is yellow. An allele mismatch with
+    the panel above 1% gives yellow, above 10% red (the kit is not added;
+    most likely a wrong build or a wrong panel). The kit's side file
+    (_kit.txt) gets build_verified, allele_mismatch_rate and
+    duplicate_positions.
+  - For extra sets whose .bim differs from the panel's, the card shows the
+    chromosome mismatches (those SNPs are not used), position differences and
+    palindromic SNP counts.
+  - PORT: if 7654 is busy, the first free port between 7655 and 7699 is used;
+    the running copy's port is kept in qps_port.txt in the program folder and
+    "qpAdm Studio BASLAT.bat" looks there first.
+  - CLOSING: "Close the program" button in the top bar (asks first if a job
+    is running; it also stops background jobs). While a job is running,
+    closing or reloading the tab first asks the browser for confirmation.
+    If started with the .bat, the program stops 10 seconds after the last
+    tab is closed; if started from RStudio, closing the tab does not stop
+    the program.
+  - TIME LEFT: the rotation, f-statistics, qpGraph, FST and Panel bars show
+    "~mm:ss left for this stage" in measurable stages (model counter, f2
+    blocks, SNP reading).
+
+--------------------------------------------------------------------------------
+  v6.4 test NOTES
+--------------------------------------------------------------------------------
+  - No new packages. New: "qpAdm Studio BASLAT.bat" (EASY INSTALL above).
+  - EXTRA SETS (modelling without merging): the Data tab has an "Extra sets
+    (kit / paper set)" area. PLINK sets with the same SNP layout as the panel
+    (e.g. Adna Merge Studio N1 output, paper sets) enter the model without
+    being merged on disk. Each set gets a coloured card: green compatible;
+    yellow warning (dropped SNPs, prefixed label, same individual); red
+    incompatible (the set alone is dropped, one-line reason). Extra-set
+    labels are marked "◇ set" in the selectors. qpAdm (single, batch,
+    sequential, predefined model, rotation) runs with allsnps=FALSE and
+    allsnps=TRUE. f-statistics, qpGraph, FST and Panel do not work with
+    extra-set labels yet; the button states the reason.
+  - RAW KITS: a MyHeritage / AncestryDNA / 23andMe / FTDNA raw file
+    (.txt/.csv/.zip/.gz) can be dropped or chosen in the same area. The
+    program aligns the kit to the panel (Adna Merge Studio's rule; each kit
+    on its own) and writes a single-individual PLINK set under "kit_setleri"
+    in the program folder; the same kit is not converted twice for the same
+    panel. The raw file is not touched. The panel must be PLINK. For VCF use
+    Adna Merge Studio. After switching to another panel, kits not aligned to
+    it show red; add the raw kit again (back on the old panel it is green
+    again).
+  - If an extra set changes on disk (e.g. Adna re-created it under the same
+    name), the model does not start and the set is checked again; run the
+    model again. An extra set not found at start-up (e.g. a disk that is not
+    connected) stays in the list with a red card.
+  - In runs with extra sets the allele frequencies of the panel labels are
+    kept under "f2cache\afs_cache"; later runs are faster (at most 8 GB; the
+    oldest are removed).
+  - The program opens in the browser on port 7654 by default:
+    shiny::runApp(app) is enough.
+  - STARTER PACK: Set Management > Predefined models > "Starter pack" loads the
+    ready-made model that comes with the program (Rum_Turkmen_Zoroastrian_test;
+    prepared for AADR v66.p1 2M) in one click. If no set is chosen in the Data
+    tab, the model is added to the list; choose the genotype set to run it.
+
+--------------------------------------------------------------------------------
+  v6.3 NOTES
+--------------------------------------------------------------------------------
+  - "test" has been dropped from the version name. Everything in v6.3 test and
+    v6.3 test2 (notes below) is in this release. No new packages.
+  - The Windows file dialog ("Choose file", "Choose genotype prefix", "Add
+    external label file" and similar) now opens IN FRONT of the browser, on
+    top. Before, it could open behind the browser and stay invisible; a second
+    click then showed "A file dialog is already open". If you press the button
+    again while the dialog is open, the old dialog is closed and a new one
+    opens.
+  - In allsnps=TRUE runs the target SNP count is made at the end of the run
+    (the genotypes are read once more; a minute or two on a large set). While
+    it runs, the result card and the Accumulated models table show
+    "counting...", Excel and the RAW output show "counting (not finished)"; the
+    value appears by itself when the count is done. Download an Excel taken
+    during the count again after it has finished.
+  - The model Excel (Results > selected models > Excel) now writes the rcond /
+    matrix warnings from the same source as the RAW output and the batch
+    Excel. Before, it showed "rcond: none" and left out admixtools' "solve():
+    system is singular" warning.
+
+--------------------------------------------------------------------------------
+  v6.3 test2 NOTES
+--------------------------------------------------------------------------------
+  - Still a TEST release: field fixes on top of v6.3 test. No new packages.
+  - The PREDEFINED MODEL FILE is now saved with the ".qpAdm.txt" extension
+    (".qpadm" could not be shared in many messaging apps). Old .qpadm files
+    still open. Windows hides known extensions, so Explorer shows the file as
+    "X.qpAdm"; a double click opens it in Notepad. If an app renames the file
+    (for example "model (1).txt") the program still recognises it from the
+    format line inside. A model file dropped into the label file area is not
+    read as a label file; it is skipped with a one-line notice.
+  - In allsnps=TRUE runs "Target SNPs" is filled again (it was empty since
+    v6.0). If the count fails, one line is written to the console.
+  - Model Excel (Results > selected models > Excel): the "Right/Left labels ->
+    sample IDs" tables are written with the run's own label mapping
+    (including run-specific labels of predefined models). Without a reference
+    result no "Reference" row is written. Column B is at most 60 wide; long ID
+    lists stay on one line and run over the empty cells to the right.
+  - EIGENSTRAT sets in TGENO format (the AADR v66 distribution) cannot be
+    chosen: admixtools does not read this format and would give wrong results
+    without an error. Convert such a set to PLINK with Adna Merge Studio and
+    choose the PLINK set.
+
+--------------------------------------------------------------------------------
+  v6.3 test NOTES
+--------------------------------------------------------------------------------
+  - This is a TEST release. Once the features mature, "test" will be dropped
+    from the version name.
+  - No new packages.
+  - PREDEFINED MODELS (.qpadm). A .qpadm file carries several qpAdm models;
+    the Left, Right and optional Target populations of each model are
+    defined by SAMPLE ID. The aim is plug-and-run: load the file, run it.
+    * Loading: Set Management > "Predefined models" tab. "Choose file
+      (.qpadm)" (Windows file dialog), the drag-and-drop area (from Windows
+      Explorer; several files allowed) or "Paste from clipboard". A genotype
+      set should be chosen on the Data tab first; if not, the models enter
+      the list and their status is computed once a set is chosen.
+    * After loading, the program switches to the Model tab. Above the
+      Populations card there is a "Predefined models" card: model picker
+      (< >), status line, mode choice and the Run button. The selected model
+      is loaded into the boxes (Target / Left / Right).
+    * Sample-ID based: the labels in the file do not have to match the
+      labels of the loaded set. For each model the program finds the
+      individuals by sample ID; if the labels differ it builds its own
+      virtual labels for that run. Nothing is written to the set's files or
+      to your virtual label list.
+    * Status colours:
+        green  ready.
+        yellow runs, see the notes: sample IDs missing from the dataset
+               (removed from the model), individuals matched via .anno
+               Master ID, an individual in two populations (kept in one place
+               by the priority Target > Left > Right), a Right population
+               with no individual found (dropped), an invalid label name
+               (fixed).
+        red    cannot run: a Left population with no individual found, no
+               Left or no Right, fewer Right populations than Left + 1, the
+               same label in two roles.
+    * Running: "Run predefined models (N)" runs from the selected model to
+      the end of the list.
+        Automatic: models run one after another without intervention; red
+          models are skipped. If any model is yellow, one confirmation window
+          opens first and lists the missing individuals and the models that
+          cannot run, with reasons: "Run as it is" (default) or "Load into
+          the boxes and edit" (switches to Step by step). Individuals matched
+          via .anno or found in two populations raise no question.
+        Step by step: the model is loaded into the boxes; change it as you
+          wish and run it; when it finishes the next model is loaded.
+    * While the queue is open (running, waiting or stopped) the model picker
+      and the table order are locked; use "End the queue" first.
+    * Stop: the queue stops; the card on the Model tab offers "Run as in the
+      boxes", "Continue (model restarts)", "Next model", "End the queue".
+      IMPORTANT: a stopped model runs again FROM THE START, not from the
+      block where it stopped. Block-wise resume is not in this release; it
+      will not be added before it is measured whether admixtools can do it
+      with identical results.
+    * allsnps: per model TRUE, FALSE or BOTH (both; the model runs twice).
+      TRUE if not given. It can be changed by double-clicking the cell in
+      the Set Management table.
+    * One f2 pool: the allsnps=FALSE runs of models sharing the same virtual
+      label layout use ONE f2 pool built with the union of all their
+      populations (the genotypes are read once). The model note in Results
+      says so: the SNP set may differ from running the model alone.
+    * Target: if a model has no Target, the Target box on the Model tab is
+      used (several targets allowed); if the model has one, the model's.
+      A box Target that overlaps the model's individuals is skipped for that
+      model, with a notice.
+    * .anno: if an AADR .anno file sits next to the set (or was added as an
+      external label file), sample IDs not found in the set are matched by
+      Master ID in the .anno (with several candidates, the one with the most
+      autosomal SNPs). Without .anno this step is skipped.
+    * Results: a "Predefined model" note above each result; also a
+      "Predefined model summary (target x model, p-value)" card and "Export
+      the summary to Excel" (Matrix and Models sheets). The model name and
+      notes are written to the batch Excel and the RAW output. If the file
+      carries an embedded reference result, a comparison is shown (same /
+      different: largest weight difference and p).
+    * Crash recovery: if the program or the computer goes down while the
+      queue runs, the next start shows "An unfinished queue was found"; on
+      top of the Model tab: "Continue where it stopped", "Load results
+      only", "Delete". The record is qps_pdm_queue.rds in the working
+      folder; it is deleted when the queue ends normally.
+    * Set Management > Predefined models table: double-click the model name
+      or allsnps cell to edit (Enter saves); Up / Down; Open in the Model
+      tab; Remove selected; Clear the list; Save (.qpadm) writes the whole
+      list to one file (to merge several files); Save selected separately
+      (to split a file); Copy to clipboard. The same model is not added
+      twice; the same name with different content is added as "name (2)".
+    * File details (optional): File name, Recommended dataset (pick from the
+      AADR list or type), Author, Description. If the recommended set
+      differs from the loaded one, only an information note appears; the
+      models still run.
+    * "Add to predefined models" in the Right row of the Model tab adds the
+      model in the boxes to the list (model name, also add the Target,
+      allsnps, add the last result as reference -- all chosen in the
+      window). The current individuals of the populations in the boxes are
+      written as sample IDs; your manual virtual label mappings are not
+      written separately.
+  - .qpadm FILE FORMAT (UTF-8, tab-separated text; can be opened and edited
+    in Excel; ";" and "," separators, BOM and CRLF are also accepted;
+    unknown lines are ignored; Excel "Unicode text" (UTF-16) and Turkish
+    Windows "tab-delimited text" saves are read too; column names such as
+    Group ID / Genetic ID / IID are recognised):
+        #qpadm      1
+        #name       Example models
+        #dataset    AADR v62.0 1240K
+        #model      M01   allsnps   BOTH
+        model  role    label       sample_id
+        M01    target  Target1     I1234
+        M01    left    Anatolia_N  I0001
+        M01    left    Anatolia_N  I0002
+        M01    left    WHG
+        M01    right   Mbuti
+        ...
+    Role: target, left, right. If sample_id is left empty, all individuals of
+    that label in the loaded set are taken. Optional fifth column master_id
+    (for .anno matching). #model lines carry allsnps (TRUE / FALSE / BOTH),
+    maxmiss, blgsize, note; #ref lines carry an embedded reference result.
+
+--------------------------------------------------------------------------------
+  v6.2 NOTES
+--------------------------------------------------------------------------------
+  - No new packages.
+  - Labels: "Choose label source" on the Data tab has been REMOVED. Labels are
+    always read from the loaded set's own .fam/.ind. (In v6.1 a separately
+    chosen source only changed the labels shown on screen; the run was still
+    built with the set's own labels, which could be misleading.) To use the
+    labels of another file, use "Add external label file(s)"; AADR .anno files
+    can be added too.
+  - If your old default record holds a separate label source, the program asks
+    once at the first start: "Add as external label file". The added file goes
+    into the list but is not activated by itself; you switch external labels on
+    with the switch on the Data tab.
+  - Advanced label editor: "Save selected (.fam / .ind / .txt)". Only the
+    selected individuals are written, with the label in the Current label
+    column, sex/phenotype from the source file and in the order of the left
+    list. Same folder as Full copy; the active set's own label file is never
+    overwritten.
+  - f2 pools: a pool is now recognised by the actual content of the run's
+    populations (sample ID list per population). Adding an unrelated virtual
+    label no longer invalidates existing pools. Pools built with v6.1 and
+    earlier are still found.
+  - Selection boxes: dragging from an empty part of the box selects with a
+    rectangle. Right-click no longer deletes directly; it opens a menu: "Copy"
+    (names of the selected items to the clipboard), "Remove from selection",
+    "Split into individuals" (on a label).
+  - Selections in the boxes are kept when a virtual label is added or removed.
+    For a virtual label that changes the content of a selected label, a
+    confirmation window opens first (affected boxes and labels; Apply /
+    Cancel). If applied: a label that loses individuals stays selected; a label
+    whose individuals all move to one new label is replaced by the new name; a
+    label split over several labels is removed from the selection.
+  - Individual selection by sample ID (all boxes, all run types): choosing an
+    "ID -> label" row in the search adds only that individual, named
+    label_sampleID; a label row adds all its individuals. An individual
+    selected on its own leaves its label group for that run (the group runs
+    without it; you are told). If the same individual is selected in two
+    boxes the run does not start. A label whose individuals are all selected
+    separately is empty and drops out of the run. Saved sets store these
+    entries as label_sampleID.
+  - Batch run: each model is added to Results as soon as it finishes. When the
+    first result arrives the Results tab opens and shows that model; later
+    models are added to the list and to the "Batch run table" without changing
+    the screen. The top card of Results shows a "3/10 models finished" counter.
+    Excel, RAW and the table PNG can be taken with the models finished so far.
+    Stop keeps the finished models; they are also kept if the run is cut off
+    unexpectedly.
+  - Rotation: the table fills as models finish; Stop keeps the finished ones;
+    the plot and PNG are drawn when the run ends.
+  - Sequential models (switch on the Model tab, below Target): several Left
+    sets run in turn with the same Target and Right; each set is one model
+    (M01, M02, ...).
+      * When the switch is turned on, the Left box selection becomes the first
+        set. "Add Left set" copies the box selection into the list without
+        clearing the box (easy to change one source and add a new set). The
+        same set is not added twice.
+      * For each set in the list: load into the Left box, up / down, delete.
+      * Works with a single target only: while several targets are selected
+        the switch is disabled; while the mode is on, a new Target selection
+        replaces the previous one and "Split label into individuals" is not
+        available.
+      * Run uses only the sets in the list; if the box selection is not in the
+        list, a note appears below the button. Overlap of Left and Right and
+        Right being larger than Left are checked for each set.
+      * A load warning before each run: number of models and combined number of
+        populations (target + union of the Left sets + Right). With
+        allsnps=FALSE all models use ONE f2 pool built with this union (the p
+        values rest on the same SNP set). With allsnps=TRUE the genotype is read
+        again for each model.
+      * The list is not deleted when the switch is turned off (it stays while
+        the program is open).
+      * No batch run table is built in this mode (the Left sets differ). In the
+        batch Excel every row of Summary, Weights and Popdrop is one model;
+        weights are written as "source: weight ± SE".
+  - Batch run table: "Copy to clipboard" puts the same image as the PNG on the
+    clipboard (paste into Word, PowerPoint). On Windows via PowerShell in the
+    background; on other systems with the browser's clipboard permission.
+  - Advanced label editor: the list of individuals on the left now arrives
+    page by page; search, column filters and sorting are done in R. The
+    RStudio freeze when switching to the tab with large sets (e.g. 27,000
+    individuals) is fixed. Search results appear about half a second after you
+    stop typing.
+
+--------------------------------------------------------------------------------
+  v6.1 NOTES
+--------------------------------------------------------------------------------
+  - No new packages.
+  - File selection: on the Data tab, "Choose genotype prefix", "Choose label
+    source" and "Add external label file(s)" open the Windows file dialog.
+    It appears within 1-2 seconds on top of the browser and other windows.
+    While it is open the program keeps working (drag and drop included);
+    only one dialog is open at a time. Outside Windows, or if the dialog
+    cannot be opened, the program's own file dialog opens.
+  - The last folder used is remembered separately for each file type (set,
+    label source, external label file); the dialog opens there.
+  - Drag and drop: the Data tab has two dashed areas.
+      External label files: drop .fam/.ind/.txt files from File Explorer onto
+      the area; the file content is read. The browser does not give the
+      file's location on disk, so the list shows "no disk path".
+      Set: drop one of the .bed/.bim/.fam (or .geno/.snp/.ind) files onto the
+      area. The browser does not give the location; the program looks for a
+      file with the same name and size in the set folders you opened before,
+      their parent folders and one level below these (the content is not
+      read). If it is not there, the program searches its own folder and
+      parent folders, the drive root and the user folders (Documents,
+      Desktop, Downloads) a few levels deep. A single match is loaded,
+      several matches are offered for choice. If nothing is found the file
+      dialog opens (the name you dropped is shown in its title); the folder
+      you choose there is searched on later drops.
+  - Set Management > Defaults (new sub-tab):
+      * Default set: loaded automatically when the program starts. "Make the
+        active set the default" stores the loaded set (and a separately chosen
+        label source, if any); "Choose genotype prefix" makes a set the default
+        without loading it; "Remove default" clears it.
+      * Default Right / Left set: preselected on the Model and Rotation tabs;
+        the Right and Left boxes are filled with them on first load.
+      * Remembered last folders and "Forget folders".
+    These are stored in qpadm_defaults_v3.rds in the program folder, together
+    with your saved Right/Left sets. Copy this file to a new version's folder
+    to keep your sets and defaults.
+  - When the set changes and the label source was the previous set's own
+    .fam/.ind, the new set's own file is used; a separately chosen label
+    source is kept.
+  - Selection boxes (Target, Left, Right, Set Management, Rotation, FST,
+    Panel, f-statistics, qpGraph and the search box):
+      * Select several items with Ctrl+click or Shift+click, or by pressing on
+        an item and dragging across others; Delete removes the selected ones.
+      * Drag selected items and drop them before/after another item to change
+        the order (the first Right pop and the Left order affect results).
+      * Right-click removes that item.
+      * Double-click opens an item for editing: it goes back into the search
+        field at the same place; a newly chosen label takes that place, and if
+        nothing is chosen the old item returns.
+  - Search: with several words (e.g. "iran n", "yamnaya samara") results are
+    ordered so that labels whose parts (pieces separated by _ . -) match
+    exactly, where the words appear in the typed order, and shorter names come
+    first; in long lists the best matches are no longer cut off. In the label
+    or sample ID search box a label itself comes before its members' rows.
+  - Model > Target: "Split label into individuals" switch. When on, labels
+    in or added to Target open into their individuals in the box; each
+    individual is a separate target named label_sampleID (e.g.
+    Russia_Samara_EBA_Yamnaya_I0231.AG). Right-click an individual you do not
+    want (e.g. the .SG copy of the same person) to remove it. Labels added
+    after turning the switch off stay as groups, so groups and individuals
+    can be mixed in one selection. To bring back a removed individual, add
+    the label again with the switch on. The individuals are the label's
+    current members (virtual labels applied). Temporary virtual labels are
+    built for the run; the original files, the virtual label list and the
+    label lists do not change. A name that cannot be written to disk or
+    clashes with another label is changed and reported. The run does not
+    start if an individual's original label is in Left or Right.
+  - While Target holds individual entries, every run starts with a load
+    warning ("Continue" or "Cancel"); there is no limit and the run can be
+    stopped with Stop:
+      allsnps=FALSE: the f2 pool is built with the targets + Left + Right;
+      the window shows the memory extract_f2 needs without splitting the work
+      and the pool's disk size. Memory grows with the square of the number
+      of populations.
+      allsnps=TRUE : the genotype file is read again for each target; the
+      window shows a rough time per target and in total (measured: one target
+      took 4.7 min with a 14.4 GB .bed).
+  - Results > "Batch run table" (new card): the batch run of the shown model
+    in one table. Rows are targets, columns are the Left labels (vertical
+    headers), followed by p, chisq and feasible. Each cell shows the weight
+    with se and z below; negative weights are red, a failed target shows
+    ERROR. Every Left column has its own colour, darker for higher weights.
+      * Click a header to sort by that column descending, click again for
+        ascending; failed and empty values always stay at the bottom.
+      * The table reduces its font size to fit the card.
+      * "Save table as PNG" saves the table in the order on screen
+        (qpadm_batch_<run>_<time>.png). Choose the folder with the card's
+        "Save folder" button; if none is chosen, the graph card's folder is
+        used.
+  - The graph title shows "SNP Used" next to chisq: the same number as "Used
+    SNPs" in the Results boxes (with "<=" when it is the f2 pool's upper
+    bound).
+  - The console box placeholder and the qpAdm progress stages follow the
+    selected language.
+  - The f-statistics and qpGraph progress bars show the elapsed time.
+
+--------------------------------------------------------------------------------
+  v6.0 NOTES
+--------------------------------------------------------------------------------
+  - No new packages.
+  - Console: admixtools' block progress ("block 1 out of 713" ...) now shows on
+    a single line; the console follows new output to the bottom (unless you
+    scrolled up). When a model finishes, an R-session style transcript is
+    written: the call, the weights and ALL nested models (popdrop), and p at full
+    precision. Stops, run time, errors, rotation, FST, f2 pool and virtual label
+    actions are logged too. Console lines and the downloaded console file are
+    fixed English (file name: qpadm_console_<time>.txt).
+  - Console commands: qps_status() (dataset, pool, run state),
+    qps_grep("pattern") (label search).
+  - Results: the "Model shown" picker in the summary card switches the boxes,
+    weights, popdrop, right set, label mapping, chart, RAW and batch Excel
+    together. In a batch run every target's summary and popdrop can now be
+    viewed; for an older model the RAW reports the virtual labels and label
+    mapping AS THEY WERE at that run. Number-of-sources box; negative weights in
+    red; "Copy right set" button.
+  - Model: a run does not start unless there are more Right than Left
+    populations (the rank test needs at least Left + 1 Right). "Replace all" and a
+    live counter in paste-from-text. +Target / +Left / +Right in the Data tab's
+    label table.
+  - Progress bars show the elapsed time; with allsnps=TRUE an estimate of the
+    time left for the current target during the block phase (~). Source names in
+    the rotation progress.
+  - Rotation: single-source models can now pass the Flegontova filter (the
+    nested-model and weight-range conditions are vacuous with one source); a
+    multi-source model without popdrop still fails. Fit errors are logged.
+  - FST: the settings used (adjust_pseudohaploid, auto_only, maxmiss, blgsize)
+    above the table and on the Excel "Parameters" sheet; a "table produced with
+    previous settings" warning when they change. An explanation is shown when a
+    single-sample pseudohaploid population fails with adjust_pseudohaploid on.
+  - SNP counts: "Used SNPs" and "Target SNPs" boxes in the summary; also in each
+    target heading of a batch run, the accumulated models table, Excel (model
+    sheet and batch Summary: Used_SNPs, Used_SNPs_min, Used_SNPs_max, SNP_basis,
+    Target_SNPs), the RAW report and the console.
+      allsnps=TRUE : each f4-statistic uses different SNPs; the box shows their
+                     mean, with the minimum – maximum below.
+      allsnps=FALSE: the number of SNPs in the f2 pool. With maxmiss > 0 it is
+                     shown as "<=" (upper bound: each pair uses its own complete
+                     SNPs).
+    Target SNPs = the number of SNPs with data for the target (autosomes). With
+    allsnps=FALSE it is read from the pool instantly. With allsnps=TRUE, the
+    first time a target is run a "Counting target SNPs" step follows qpAdm: the
+    genotype file is read once more (a few minutes on a large set; the time is
+    written to the console). The result is kept in qps_target_snps.rds in the
+    f2cache folder; the same target (same individuals, same file) is not read
+    again.
+  - Background logs: the error stream (stderr) is now merged into standard
+    output; previously two streams wrote to the same file and some lines were
+    overwritten.
+  - External virtual labels: several .fam/.ind/.txt files can be added at once in
+    the Data tab. In the "External label files" card the order of the files sets
+    the priority (Up / Down); each file can be switched on or off. When a sample
+    ID carries different labels in different files, select rows in the
+    "Between-file conflicts" table and choose another file's label or "Keep
+    original label"; when a new file creates conflicts you are asked which file
+    takes priority. If the list changes while external labels are on, the switch
+    turns off; turn it on again to use the new state. The list cannot be changed
+    while an analysis runs in the background. An info box appears when the same
+    new name occurs in several files or equals a label already in the set.
+    overlap.txt lists the files (with md5) and the between-file conflicts; the
+    RAW report lists the files as at run time. Your original files are never
+    modified.
+
+--------------------------------------------------------------------------------
+  v5.9 NOTES
+--------------------------------------------------------------------------------
+  - No new packages.
+  - Results > Chart: a picker for the accumulated models. The chart shows the
+    selected model; the PNG name comes from the model SHOWN:
+        qpadm_<no>_<target>_<T|F>_<run time>.png
+    In the accumulated models table, multi-select + "Save charts of selected
+    models as PNG" writes one file per model (folder and resolution from the
+    Chart section).
+  - Set Management > Virtual labels: "Export virtual labels" card. All or some
+    of the manual and external virtual labels; two-column .txt always, .ind when
+    the source has sex, .fam when the source has sex + phenotype. The file holds
+    only the selected individuals: load it back as an external virtual label
+    file; it CANNOT replace the genotype set's .fam/.ind.
+  - The virtual-label digest no longer depends on the order in which rules were
+    added and carries a fingerprint of the set's label file (.fam/.ind): if the
+    label file changes, an old f2 pool is not reused. Old virtual-label temp
+    folders (.qpadm_vfam) and f2 pools are rebuilt once; remove the old ones
+    with the clean-up button in Set Management.
+  - Label name rule: spaces and \ / : * ? " < > | are not allowed and a name
+    cannot end with a dot or space (the f2 pool writes labels as folder names;
+    e.g. Hatti/Hittite breaks pool building). If an external file has such a
+    label, an "Apply suggested names" button appears.
+  - Export now uses a folder chooser; an existing file of the same name asks
+    for confirmation.
+  - Set Management > Advanced label editor (new sub-tab):
+      * The left list holds every individual of the set's .fam/.ind in file
+        order. The checkbox selects one at a time; clicking a label selects all
+        individuals with that label, clicking again removes them all. Selected
+        individuals move to the right list; the x on the right removes one.
+      * On the right, "New label" + "Apply label" relabels the selection. The
+        change is first marked as PENDING (pencil in the Status column).
+        Sample IDs never change; only labels do.
+      * Output 1 -- "Transfer to virtual labels": pending changes become virtual
+        label rules (source: advanced); the set's file is not changed.
+      * Output 2 -- "Save full copy": the set's .fam/.ind is written with the
+        same rows in the same order, under the set's file name, to the chosen
+        folder; only the label field changes. If the set's own folder is chosen,
+        an overwrite warning appears; on confirmation the old file is kept as a
+        time-stamped backup, labels are reloaded and f2 pools are rebuilt with
+        the new labels. The set's own file cannot be changed while an analysis
+        runs in the background.
+      * "Label editing independent of the loaded set": one or more
+        .fam/.ind/.txt files; the loaded set and the analyses are not affected,
+        only files are produced. File order is the priority (Up/Down); if a
+        sample ID carries different labels across files you are asked which
+        file takes priority, and the Conflicts tab allows row-by-row choices.
+        The Similar IDs tab (Adna merge studio rules) is for information only.
+        Output: a two-column label file (.txt) and a full copy of the reference
+        file (.fam/.ind).
+
+--------------------------------------------------------------------------------
+  v5.8 NOTES
+--------------------------------------------------------------------------------
+  - New packages: plotly, htmlwidgets (for qpGraph > Editor). Installation.R
+    installs them automatically. If missing, the program still starts; only the
+    Editor sub-tab shows an install message.
+  - admixtools version: older releases raised "unused argument" for some
+    functions when given a precomputed f2 directory. v5.8 builds the f2 array
+    itself, so it works regardless of your version; updating is NOT required.
+    To see your version, type in the Console:  packageVersion("admixtools")
+  - f2 pools live in the "f2cache" folder. When a genotype set is selected, the
+    most recently built pool for that set is restored as the active panel.
+
+================================================================================
