@@ -1,5 +1,14 @@
 # ============================================================================
-# qpAdm Studio v6.4 by mozy70  -- tek dosya (RStudio icin)
+# qpAdm Studio v6.5 by mozy70  -- tek dosya (RStudio icin)
+# v6.5 (2026-11-15; kararlar claude/qpAdm_Studio_v6.5_kararlari.md; olcum C:\qpAdm\Qpadm studio\olcum_v65):
+#   v6.5 ADIM 1 (yama_v65_1.py): allsnps=TRUE ek setsiz toplu / sirali / on tanimli kosuda TEK GENOTIP GECISI
+#   (qps_geno_pass: 2f6957a f4blockdat_from_geno dongusunun kopyasi; olcumde 3 modelde weights / popdrop / rankdrop /
+#   SNP tablosu fark 0, 126 sn'ye karsi 498 sn), hedef SNP sayimi ayni geciste (ikinci okuma yok), ilerlemede tek gecis
+#   asamasi, bolme ve sirali model yuk tahmini tek gecise gore. Gecis hata verirse eski is basina okuma yoluna duser.
+#   v6.5 ADIM 2 (yama_v65_2.py): allsnps=TRUE ek setsiz rotasyonda tek genotip gecisi (modellerin dortlulerinin birlesimi;
+#   model basina f4blocks uyumu), ilerlemede gecis + uyum asamalari, rotasyon allsnps uyarisi gercege uyduruldu.
+#   v6.5 ADIM 3 (yama_v65_3.py): RAW'da hedef basina rcond ve kosu surerken notlu ara icerik; Biriken modellerden ayni
+#   setli (etiket + sample ID) modelleri secip Toplu kosu tablosunda birlikte gosterme, tablonun Excel'i; surum adi v6.5.
 # v6.4 (2026-11-09; "test" ibaresi kalkti; yeni ozellik yok, iyilestirme. Kararlar claude/qpAdm_Studio_v6.4_sonrasi_kararlar.md:
 #   v6.4 test'in ChatGPT incelemesinden kabul edilen maddeler + port/kapatma + kalan sure):
 #   v6.4 ADIM 1 (yama_v64_8.py): "0" alleli icin uzlasma kurali (hesaplama birimi; xs_zero_fix), havuz adayliginda ek set
@@ -342,7 +351,7 @@
 #   "digest","callr","ggplot2","ggpubr","patchwork","scales","ragg"))
 # Calistirma: "qpAdm Studio BASLAT.bat" (cift tik) ya da RStudio'da Session > Set Working Directory > Choose
 #   Directory (program klasoru), sonra
-#   app <- source("qpAdm Studio v6.4.R", encoding = "UTF-8")$value
+#   app <- source("qpAdm Studio v6.5.R", encoding = "UTF-8")$value
 #   shiny::runApp(app)   # tarayicida; port 7654, doluysa 7655-7699 (dosyanin sonundaki options; v6.4)
 # ASLA: runApp("dosya_yolu.R")  -- bkz. DEVIR NOTU Ders 6.
 # ============================================================================
@@ -441,7 +450,7 @@ split_expand <- function(v, labs, labelmap, reg = SPLIT_EMPTY, taken = character
 # Yuk tahmini. FALSE: extract_f2'nin bolmeden istedigi bellek ~ SNP x P^2 x 32 bayt (olcum: 10 pop, 1.856.583 SNP
 # -> admixtools "5643 MB"; formul 5.665 MiB); havuz diski ~ P^2 x blok x 16 bayt (f2 + sayim; ~713 blok).
 # TRUE: hedef basina genotip okumasi ~ 19,5 sn / GB (olcum: 14,43 GB .bed'de 280,8 sn).
-SPLIT_SEC_PER_GB <- 280.8 / 14.43
+SPLIT_SEC_PER_GB <- 156 / 14.43   # v6.5: olcum_v65 (14,43 GB .bed, dort tam gecis 106-205 sn, ortalama 156 sn)
 split_load <- function(n_ind, n_lr, n_snp, geno_bytes, blocks = 713) {
   P <- n_ind + n_lr; snp <- if (isTRUE(is.finite(n_snp)) && n_snp > 0) n_snp else NA_real_
   list(P = P, ram = snp * P^2 * 32, disk = P^2 * blocks * 16,
@@ -1492,6 +1501,62 @@ xs_qpadm_true <- function(AF, snp, target, left, right, blgsize = 0.05, verbose 
   fb <- admixtools::f4blockdat_to_f4blocks(fd)[L[-1], right[-1], , drop = FALSE]
   admixtools::qpadm(NULL, NULL, NULL, target, f4blocks = fb, verbose = verbose)
 }
+# v6.5 ADIM 1: allsnps=TRUE TEK GENOTIP GECISI. admixtools 2f6957a f4blockdat_from_geno(allsnps = TRUE, auto_only = TRUE,
+# blgsize = 0.05, poly_only = FALSE) dongusunun birebir kopyasi (olcum_v65 vpass): butun islerin dortluleri (popcombs)
+# birlesik verilir, .bed bir kez okunur. allsnps = TRUE'da her dortlunun SNP'leri yalniz kendi dort popuna bagli, blok
+# sinirlari yalniz .bim'e -> dortlu basina sonuc tek basina hesaplanmisla ayni. Ek: tpops hedeflerinin otozomal "frekansi
+# tanimli" SNP sayisi ayni dongude (anygeno_to_aftable sayimiyla ayni tanim: en az bir cagrili genotip). Ilerleme
+# satirlari qpadm'inkiyle ayni kalipta ("block i out of n"). Kendi kendine yeter: admixtools ad alani, readr, tidyr, dplyr.
+qps_geno_pass <- function(pref, popcombs, tpops = character(0), blgsize = 0.05, prog = TRUE) {
+  ns <- asNamespace("admixtools")
+  if (prog) cat("Reading metadata...\n")
+  pref <- normalizePath(pref, mustWork = FALSE); l <- ns$format_info(pref)
+  indfile <- suppressWarnings(readr::read_table2(paste0(pref, l$indend), col_names = l$indnam, col_types = l$indtype, progress = FALSE))
+  snpfile <- suppressWarnings(readr::read_table2(paste0(pref, l$snpend), col_names = l$snpnam, col_types = "ccddcc", progress = FALSE))
+  cpp_read_geno <- l$cpp_read_geno; fl <- paste0(pref, l$genoend); nsnpall <- nrow(snpfile); nindall <- nrow(indfile)
+  snpfile$keep <- as.numeric(gsub("[a-zA-Z]+", "", snpfile$CHR)) <= 22
+  popcombs <- dplyr::distinct(popcombs[, c("pop1", "pop2", "pop3", "pop4")]); pc <- popcombs; modelvec <- 0
+  pops <- unique(c(popcombs$pop1, popcombs$pop2, popcombs$pop3, popcombs$pop4))
+  if (!all(pops %in% indfile$pop)) stop(paste0("Populations missing from indfile: ", paste0(setdiff(pops, indfile$pop), collapse = ", ")))
+  if (any(duplicated(indfile$ind))) stop("Duplicate individual IDs are not allowed!")
+  allinds <- indfile$ind; indfile <- dplyr::filter(indfile, pop %in% pops); indvec <- (allinds %in% indfile$ind) + 0; popvec <- match(indfile$pop, pops)
+  p1 <- match(pc$pop1, pops); p2 <- match(pc$pop2, pops); p3 <- match(pc$pop3, pops); p4 <- match(pc$pop4, pops)
+  if (prog) cat(sprintf("Computing block lengths for %d SNPs...\n", sum(snpfile$keep)))
+  block_lengths <- ns$get_block_lengths(dplyr::filter(snpfile, keep), blgsize = blgsize); numblocks <- length(block_lengths)
+  snpfile$block <- NA; snpfile$block[snpfile$keep] <- rep(1:length(block_lengths), block_lengths); snpfile <- tidyr::fill(snpfile, block, .direction = "updown")
+  snpind <- split(snpfile$keep, snpfile$block); bl <- rle(snpfile$block)$lengths; start <- dplyr::lag(cumsum(bl), default = 0); end <- cumsum(bl)
+  usesnps <- matrix(0); numer <- cnt <- matrix(NA, numblocks, nrow(pc))
+  tpops <- intersect(unique(as.character(tpops)), pops); ti <- match(tpops, pops); tcnt <- stats::setNames(numeric(length(tpops)), tpops)
+  for (i in 1:numblocks) {
+    if (prog) cat(sprintf("Computing %d f4-statistics for block %d out of %d...\n", nrow(pc), i, numblocks))
+    gmat <- cpp_read_geno(fl, nsnpall, nindall, indvec, start[i], end[i], T, F)[, snpind[[i]]]
+    at <- ns$gmat_to_aftable(gmat, popvec)
+    if (length(ti)) tcnt <- tcnt + rowSums(is.finite(at[ti, , drop = FALSE]))
+    num <- ns$cpp_aftable_to_dstatnum(at, p1, p2, p3, p4, modelvec, usesnps, TRUE, FALSE)
+    numer[i, ] <- unname(rowMeans(num$num, na.rm = TRUE)); cnt[i, ] <- c(num$cnt)
+  }
+  out <- tidyr::expand_grid(pc, block = 1:numblocks); out$est <- c(numer); out$n <- c(cnt)
+  out <- dplyr::left_join(popcombs, out, by = paste0("pop", 1:4))
+  out <- dplyr::mutate(out, length = block_lengths[block], est = dplyr::if_else(is.finite(est) & n > 0, est, NA_real_))
+  list(fd = out, tsnp = tcnt, nb = numblocks)
+}
+# v6.5 ADIM 1: tek gecisin f4 tablosundan bir isin qpAdm'i -- qpadm(prefix, allsnps = TRUE) ile ayni sira (left = c(target,
+# left)); o isin satirlari suzulur (f4blockdat_to_f4blocks blok uzunlugunu ve NA blok atmayi verilen satirlardan yapar),
+# verbose iken SNP tablosu qpadm'in bastigi bicimde (parse_f4_snp_table). xs_qpadm_true'nun geno karsiligi.
+qps_geno_fit <- function(fd, target, left, right, verbose = TRUE) {
+  L <- setdiff(left, target)
+  s <- fd[fd$pop1 == target & fd$pop2 %in% L & fd$pop3 == right[1] & fd$pop4 %in% right[-1], , drop = FALSE]
+  if (verbose) {
+    st <- as.data.frame(dplyr::summarize(dplyr::group_by(s, pop1, pop2, pop3, pop4), n = sum(n), .groups = "drop"))
+    cat('"allsnps = TRUE" uses different SNPs for each f4-statistic\n  Number of SNPs used for each f4-statistic:\n'); print(st)
+  }
+  fb <- admixtools::f4blockdat_to_f4blocks(s)[L, right[-1], , drop = FALSE]
+  admixtools::qpadm(NULL, NULL, NULL, target, f4blocks = fb, verbose = verbose)
+}
+# v6.5: arka plan icin dortlu tablosu (qpadm'in geno yolundaki popcombs'u: pop1 = target, pop2 = left, pop3 = right[1],
+# pop4 = right[-1]) ve islev listesi (ortam globalenv; xs_bg_funs gibi).
+qps_pcomb <- function(target, left, right) tidyr::expand_grid(tibble::tibble(pop1 = target, pop2 = setdiff(left, target)), tibble::tibble(pop3 = right[1], pop4 = right[-1]))
+qps_gp_funs <- function() lapply(list(pass = qps_geno_pass, fit = qps_geno_fit, pcomb = qps_pcomb), function(f) { environment(f) <- globalenv(); f })
 # allsnps=FALSE sanal havuz: extract_f2'nin varsayilan yolu (cols_per_chunk yok) -- discard_from_aftable (maxmiss birlesik
 # tabloya; maxmiss = 0 -> havuz "panel ve kullanilan ek setlerin ortak SNP'leri"), cpp_is_polymorphic, afs_to_f2_blocks;
 # uygulamanin extract_f2'ye vermedigi argumanlar extract_f2 varsayilanlariyla. Ic islevler ad alanindan (S1 / Ders 80).
@@ -1610,6 +1675,8 @@ log_view <- function(x) {
   x <- sub("^QPS_ROT ([0-9]+) ([0-9]+) ?(.*)$", "--- model \\1/\\2: \\3", x)
   x <- sub("^QPS_(STAGE_ERR|FS_ERR) ", "ERROR ", x)
   x <- sub("^QPS_TSNP_START ([0-9]+) (.*)$", "--- counting target SNPs (allsnps=TRUE, one genotype read): \\2", x)
+  x <- sub("^QPS_PASS ([0-9]+) ([0-9]+).*$", "--- single genotype pass: \\1 model(s), \\2 f4-statistics (allsnps=TRUE)", x)   # v6.5
+  x <- sub("^QPS_TSNP_PASS ([0-9]+) (.*)$", "--- target SNPs counted in the same genotype pass: \\2", x)   # v6.5
   x <- sub("^QPS_TSNP_TIME ([0-9.]+)$", "    target SNP read time: \\1 s", x)
   x <- sub("^QPS_TSNP_ERR ", "ERROR target SNPs: ", x)
   x <- sub("^QPS_TSNP ([0-9]+) (.*)$", "    target SNPs \\2: \\1", x)
@@ -2114,6 +2181,36 @@ bt_frame <- function(b) {
     p[i] <- as.numeric(x$p %||% NA); chisq[i] <- as.numeric(x$chisq %||% NA); fe[i] <- as.logical(x$feasible %||% NA) }
   list(target = tg, left = left, W = W, S = S, Z = Z, p = p, chisq = chisq, feasible = fe, err = err)
 }
+# v6.5 ADIM 3 (madde 6): Biriken modellerden secilenleri Toplu kosu tablosunda birlikte gostermek. Uygunluk: Right ve Left
+# etiket adlariyla VE her etiketin arkasindaki sample ID'lerle ayni (sira onemsiz; ayni bireyler farkli adla birlesmez),
+# ayni allsnps modu, FALSE'ta ayni maxmiss. Ilk secili model referanstir; ilk uyumsuzluk tek satirlik gerekce olur.
+# Etiket -> ID eslemesi her kaydin toplu kaydindan (kosu anindaki esleme).
+bts_ids <- function(r, batches, l) { b <- if (!is.null(r$batch)) batches[[r$batch]] else NULL; sort(unique(as.character(b$labelmap[[l]] %||% character(0)))) }
+bt_sel_check <- function(runs, batches) {
+  if (length(runs) < 2) return(list(ok = FALSE, why = tr("bts_need2")))
+  a <- runs[[1]]; na <- sprintf("%02d", as.integer(a$meta$no %||% 0L))
+  for (r in runs[-1]) { pre <- sprintf("%s / %02d \u2014 ", na, as.integer(r$meta$no %||% 0L))
+    if (!identical(as.character(a$meta$mode), as.character(r$meta$mode))) return(list(ok = FALSE, why = paste0(pre, sprintf(tr("bts_mode"), a$meta$mode, r$meta$mode))))
+    if (identical(as.character(a$meta$mode), "FALSE") && !isTRUE(all.equal(as.numeric(a$meta$maxmiss %||% NA), as.numeric(r$meta$maxmiss %||% NA))))
+      return(list(ok = FALSE, why = paste0(pre, sprintf(tr("bts_maxmiss"), format(a$meta$maxmiss %||% NA), format(r$meta$maxmiss %||% NA)))))
+    for (rl in c("right", "left")) { x <- unique(as.character(a[[rl]])); y <- unique(as.character(r[[rl]]))
+      if (!setequal(x, y)) return(list(ok = FALSE, why = paste0(pre, sprintf(tr(if (rl == "right") "bts_right" else "bts_left"), paste(utils::head(c(setdiff(x, y), setdiff(y, x)), 4), collapse = ", "))))) }
+    for (l in unique(c(as.character(a$right), as.character(a$left)))) { ia <- bts_ids(a, batches, l); ib <- bts_ids(r, batches, l)
+      if (!identical(ia, ib)) return(list(ok = FALSE, why = paste0(pre, if (length(ia) != length(ib)) sprintf(tr("bts_ids"), l, length(ia), length(ib)) else sprintf(tr("bts_ids_n"), l, length(ia))))) } }
+  list(ok = TRUE)
+}
+# Secilen kayitlardan toplu kayit (bt_frame / write_batch_excel bicimi). Satir adi hedef (ya da hedef · model); ayni ad
+# birden cok kez geciyorsa kosu numarasiyla ("05 · xxbabam"). Kopyadaki weights$target da satir adini alir (Excel).
+bt_sel_batch <- function(runs, batches) {
+  base <- vapply(runs, function(r) if (is.null(r$meta$model)) as.character(r$meta$target) else paste0(r$meta$target, " \u00b7 ", r$meta$model), "")
+  lab <- ifelse(base %in% base[duplicated(base)], sprintf("%02d \u00b7 %s", vapply(runs, function(r) as.integer(r$meta$no %||% 0L), 1L), base), base)
+  a <- runs[[1]]; lm <- list()
+  for (r in runs) { b <- if (!is.null(r$batch)) batches[[r$batch]] else NULL; for (l in setdiff(names(b$labelmap), names(lm))) lm[[l]] <- b$labelmap[[l]] }
+  bt <- stats::setNames(lapply(seq_along(runs), function(i) { r <- runs[[i]]; w <- r$res$weights; if (!is.null(w)) { w <- as.data.frame(w); w$target <- lab[i]; r$res$weights <- w }
+    list(target = lab[i], model = NULL, left = r$left, res = r$res, p = r$meta$p, dof = r$meta$dof, chisq = r$meta$chisq, feasible = r$meta$feasible, rcond = r$rcond %||% character(0), snp = r$snp) }), unname(lab))
+  list(batch = bt, right = as.character(a$right), left = as.character(a$left), kind = "sel", sets = NULL, rcond = character(0), log = character(0), vfam = NULL,
+       labelmap = lm, meta = list(mode = a$meta$mode, maxmiss = a$meta$maxmiss, time = format(Sys.time(), "%Y-%m-%d %H:%M:%S"), n = length(runs), keys = names(runs)))
+}
 bt_color <- function(w, j, n) {
   h <- (210 + (j - 1) * 360 / max(n, 1)) %% 360; v <- pmin(pmax(suppressWarnings(as.numeric(w)), 0), 1); v[is.na(v)] <- 0
   l <- 94 - 52 * v; list(bg = grDevices::hcl(h, 25 + 45 * v, l), fg = ifelse(l < 62, "#ffffff", "#1f2328"))
@@ -2186,6 +2283,21 @@ parse_progress <- function(txt, total = NULL) {
       sprintf(tr("prog_snps_read"), format(cur, big.mark = ",", scientific = FALSE), format(total, big.mark = ",", scientific = FALSE))
       else sprintf(tr("prog_snps_read_nt"), format(cur, big.mark = ",", scientific = FALSE))
     return(list(frac = 0.99, msg = paste0(tr("prog_tsnp"), if (nzchar(det)) paste0(" \u2014 ", det) else ""), rcond = rc))
+  }
+
+  # v6.5 ADIM 1: tek genotip gecisi (allsnps=TRUE, ek setsiz). Gecis %3-90 (blok sayaci; kalan sure "bu asama icin"),
+  # ardindan is basina qpAdm uyumu %90-99 (saniyeler). QPS_PASS n_is n_dortlu gecisten once basilir.
+  pm <- grep("^QPS_PASS [0-9]+ ", txt0)
+  if (length(pm) && !any(grepl("^QPS_STAGE_ERR single pass", txt0))) {   # gecis hata verdiyse eski yolun ilerlemesi
+    pn <- suppressWarnings(as.integer(strsplit(txt0[pm[1]], " ")[[1]][2])); if (!is.finite(pn)) pn <- 1L
+    if (!length(tmark)) {
+      seg <- txt0[pm[1]:length(txt0)]; hb <- regmatches(seg, regexpr("block\\s+[0-9]+\\s+out of\\s+[0-9]+", seg))
+      if (length(hb)) { m <- hb[length(hb)]; cur <- suppressWarnings(as.numeric(sub("^block\\s+([0-9]+).*$", "\\1", m))); tot <- suppressWarnings(as.numeric(sub("^.*out of\\s+", "", m)))
+        if (!is.finite(tot) || tot <= 0) tot <- max(713, cur)
+        return(list(frac = min(0.90, 0.03 + 0.87 * min(1, cur / tot)), msg = sprintf(tr("prog_pass"), pn, cur, tot), rcond = rc, blk = cur, tot = tot, phase = TRUE)) }
+      return(list(frac = 0.02, msg = sprintf(tr("prog_pass_start"), pn), rcond = rc))
+    }
+    return(list(frac = min(0.99, 0.90 + 0.09 * tfrac_base), msg = paste0(tinfo, tr("stg_fit")), rcond = rc))
   }
 
   # v6.4 test (saha 1): ek setli allsnps=TRUE sanal yol. Frekans tablosu bir kez (panel okuma %2-70, ek set okuma %70-78),
@@ -2414,6 +2526,18 @@ parse_rot_progress <- function(txt, total = NULL) {
   if (!length(txt)) return(list(frac = 0, msg = tr("prog_starting")))
   tot <- NA; tm <- grep("^QPS_ROT_TOTAL ", txt)
   if (length(tm)) tot <- suppressWarnings(as.integer(strsplit(txt[tm[length(tm)]], " ")[[1]][2]))
+  # v6.5 ADIM 2: tek genotip gecisi (allsnps=TRUE, ek setsiz) %3-90, ardindan model uyumlari %90-100
+  pm <- grep("^QPS_PASS [0-9]+ ", txt)
+  if (length(pm) && !any(grepl("^QPS_STAGE_ERR single pass", txt))) {   # gecis hata verdiyse eski yolun ilerlemesi
+    pn <- suppressWarnings(as.integer(strsplit(txt[pm[1]], " ")[[1]][2])); if (!is.finite(pn)) pn <- 1L; rm <- grep("^QPS_ROT ", txt)
+    if (!length(rm)) { seg <- txt[pm[1]:length(txt)]; hb <- regmatches(seg, regexpr("block\\s+[0-9]+\\s+out of\\s+[0-9]+", seg))
+      if (length(hb)) { m <- hb[length(hb)]; cur <- suppressWarnings(as.numeric(sub("^block\\s+([0-9]+).*$", "\\1", m))); tot <- suppressWarnings(as.numeric(sub("^.*out of\\s+", "", m)))
+        if (!is.finite(tot) || tot <= 0) tot <- max(713, cur)
+        return(list(frac = min(0.90, 0.03 + 0.87 * min(1, cur / tot)), msg = sprintf(tr("prog_pass"), pn, cur, tot))) }
+      return(list(frac = 0.02, msg = sprintf(tr("prog_pass_start"), pn))) }
+    p <- strsplit(txt[rm[length(rm)]], " ")[[1]]; k <- suppressWarnings(as.integer(p[2])); n <- suppressWarnings(as.integer(p[3]))
+    if (is.finite(k) && is.finite(n) && n > 0) return(list(frac = min(1, 0.90 + 0.10 * k / n), msg = paste0(tr("stg_fit"), " \u2014 ", sprintf(tr("prog_model_kn"), k, n), if (length(p) > 3) paste0(" \u2014 ", paste(p[-(1:3)], collapse = " ")) else "")))
+  }
   # v5.8: f2 bu kosuda cikarildiysa cubugun ilk %25'i extract_f2'ye ayrilir.
   ex <- parse_extract_progress(txt, total)
   base <- if (is.null(ex)) 0 else 0.25
@@ -2773,7 +2897,7 @@ label_fix_unique <- function(bad, taken) {
   stats::setNames(out, bad)
 }
 
-QPS_VERSION <- "qpAdm Studio v6.4"
+QPS_VERSION <- "qpAdm Studio v6.5"
 # v6.4 (madde 3): kurulu admixtools'un surumu ve commit'i (remotes::install_github RemoteSha yazar). Sonuclar 2f6957a ile
 # dogrulandi (olcumler M0-M4); baska commit'te ciktilara tek satir not.
 QPS_ADX_REF <- "2f6957a"
@@ -3617,7 +3741,7 @@ qpadm_code_line <- function(target, left, right, allsnps) {
 # Dosya ciktisi -> SABIT INGILIZCE (arayuz dilinden bagimsiz). Bir raporu baska
 # bir dilde uretilmis raporla karsilastirabilmek ve arsivlenen basliklarin
 # degismemesi icin bu bolum CEVRILMEZ.
-build_raw_report <- function(batch, right, left, meta, labelmap, rcond_lines, console_txt, vfam, ext = NULL, sets = NULL) {
+build_raw_report <- function(batch, right, left, meta, labelmap, rcond_lines, console_txt, vfam, ext = NULL, sets = NULL, running = NULL) {
   L <- character(0)
   add <- function(...) L <<- c(L, paste0(...))
   hr <- function() add(strrep("=", 78))
@@ -3625,6 +3749,7 @@ build_raw_report <- function(batch, right, left, meta, labelmap, rcond_lines, co
   add("Program: ", QPS_VERSION, "   |   admixtools: ", qps_adx_str(), qps_adx_note())   # v6.4 (madde 3)
   if (length(sets)) add("Sequential models: ", length(sets), " Left sets (same target and right)")   # v6.2 (K9)
   if (!is.null(meta$stopped)) add("STOPPED BY USER: ", meta$stopped, " models finished")   # v6.2 (K1)
+  if (!is.null(running)) add("RUN IN PROGRESS: ", running$done, "/", running$total, " models finished when this file was written")   # v6.5 ADIM 3 (madde 5)
   if (!is.null(pm <- meta$pdm)) {   # v6.3 test
     add("PREDEFINED MODEL: ", pm$model, if (nzchar(pm$file %||% "")) paste0("  (file: ", pm$file, ")") else "", if (isTRUE(pm$edited)) "  [edited in the boxes]" else "")
     for (z in pm$iss %||% list()) add("  note: ", pdm_issue_en(z))
@@ -3662,9 +3787,11 @@ build_raw_report <- function(batch, right, left, meta, labelmap, rcond_lines, co
   add("## 3. RESULTS"); add("")
   for (x in batch) {
     add(strrep("-", 70)); add("TARGET: ", x$target, if (!is.null(x$model)) paste0("   |   MODEL: ", x$model, "   |   left: ", paste(x$left, collapse = ", ")) else "")
-    if (is.null(x$res)) { add("  ERROR: ", x$error %||% "unknown"); add(""); next }
+    rcx <- x$rcond %||% character(0)   # v6.5 ADIM 3 (madde 5): hedef basina rcond / matris uyarilari
+    rca <- function() if (length(rcx)) { add("  rcond / matrix warnings (", length(rcx), "):"); for (z in rcx) add("    ", z) } else add("  rcond / matrix warnings: none")
+    if (is.null(x$res)) { add("  ERROR: ", x$error %||% "unknown"); rca(); add(""); next }
     add(sprintf("  p = %s | dof = %s | chisq = %s | feasible = %s", fmt(x$p), fmt(x$dof), fmt(x$chisq), as.character(x$feasible)))
-    add("  SNPs: ", snp_line_en(x$snp))
+    add("  SNPs: ", snp_line_en(x$snp)); rca()
     add(""); add("  Weights (weight | se | z):")
     w <- as.data.frame(x$res$weights)
     for (i in seq_len(nrow(w))) add(sprintf("    %-45s %8.4f %8.4f %8.3f", as.character(w$left[i]), w$weight[i], w$se[i], w$z[i]))
@@ -3676,6 +3803,7 @@ build_raw_report <- function(batch, right, left, meta, labelmap, rcond_lines, co
   }
 
   add("## 4. rcond / MATRIX WARNINGS"); add("")
+  if (!is.null(running)) add("  (run in progress: warnings so far; the complete list is written when the run finishes)")
   if (length(rcond_lines)) for (r in rcond_lines) add("  ", r) else add("  (no warnings)")
   add("")
 
@@ -3685,6 +3813,7 @@ build_raw_report <- function(batch, right, left, meta, labelmap, rcond_lines, co
   add("")
 
   add("## 6. CONSOLE OUTPUT (raw)"); add("")
+  if (!is.null(running)) add("  (run in progress: console output so far; the complete output is written when the run finishes)")
   if (length(console_txt)) L <- c(L, console_txt) else add("  (empty)")
   L
 }
@@ -4035,7 +4164,7 @@ add_tr("msg_rot_size_invalid", "minsize/maxsize geçersiz (1 <= min <= max).", "
 add_tr("msg_rot_target_in_sets", "Target, leftright/rightfix içinde olamaz.", "Target cannot be inside leftright/rightfix.", "目标不能出现在 leftright/rightfix 中。", "टारगेट leftright/rightfix में नहीं हो सकता।", "El objetivo no puede estar en leftright/rightfix.", "La cible ne peut pas figurer dans leftright/rightfix.", "لا يمكن أن يكون الهدف ضمن leftright/rightfix.", "টার্গেট leftright/rightfix-এর ভেতরে থাকতে পারে না।", "O alvo não pode estar em leftright/rightfix.", "Цель не может входить в leftright/rightfix.", "ٹارگٹ leftright/rightfix میں نہیں ہو سکتا۔", "Ziel darf nicht in leftright/rightfix enthalten sein.", "ターゲットを leftright/rightfix に含めることはできません。", "타깃은 leftright/rightfix에 포함될 수 없습니다.", "Target tidak boleh ada di leftright/rightfix.")
 add_tr("msg_rot_lr_rf_overlap", "leftright ve rightfix ortak: %s", "leftright and rightfix overlap: %s", "leftright 与 rightfix 重叠: %s", "leftright और rightfix में समान: %s", "leftright y rightfix se solapan: %s", "leftright et rightfix se recoupent : %s", "تداخل بين leftright و rightfix: %s", "leftright ও rightfix-এ মিল: %s", "leftright e rightfix se sobrepõem: %s", "leftright и rightfix пересекаются: %s", "leftright اور rightfix مشترک: %s", "leftright und rightfix überschneiden sich: %s", "leftright と rightfix が重複しています: %s", "leftright와 rightfix가 겹칩니다: %s", "leftright dan rightfix tumpang tindih: %s")
 add_tr("msg_rot_running", "Rotasyon zaten çalışıyor.", "Rotation is already running.", "旋转已在运行。", "रोटेशन पहले से चल रहा है।", "La rotación ya está en ejecución.", "La rotation est déjà en cours.", "التدوير قيد التشغيل بالفعل.", "রোটেশন ইতিমধ্যে চলছে।", "A rotação já está em execução.", "Ротация уже выполняется.", "روٹیشن پہلے ہی چل رہا ہے۔", "Rotation läuft bereits.", "ローテーションは既に実行中です。", "회전이 이미 실행 중입니다.", "Rotasi sedang berjalan.")
-add_tr("msg_rot_allsnps_warn", "allsnps=TRUE: f2 her model için yeniden hesaplanır, çok modelde uzun sürebilir.", "allsnps=TRUE: f2 is recomputed for every model; this can take long with many models.", "allsnps=TRUE: 每个模型都会重新计算 f2，模型多时会很慢。", "allsnps=TRUE: हर मॉडल के लिए f2 दोबारा गणना होगी; कई मॉडल में समय लगेगा।", "allsnps=TRUE: f2 se recalcula en cada modelo; con muchos modelos puede tardar.", "allsnps=TRUE : f2 est recalculé pour chaque modèle ; cela peut être long.", "allsnps=TRUE: يُعاد حساب f2 لكل نموذج، وقد يستغرق ذلك وقتًا طويلًا.", "allsnps=TRUE: প্রতিটি মডেলের জন্য f2 পুনঃগণনা হয়, অনেক মডেলে সময় লাগে।", "allsnps=TRUE: o f2 é recalculado a cada modelo; pode demorar bastante.", "allsnps=TRUE: f2 пересчитывается для каждой модели; это может занять много времени.", "allsnps=TRUE: ہر ماڈل کے لیے f2 دوبارہ شمار ہوتا ہے، زیادہ ماڈلز میں وقت لگے گا۔", "allsnps=TRUE: f2 wird für jedes Modell neu berechnet; das kann lange dauern.", "allsnps=TRUE: モデルごとに f2 を再計算するため、時間がかかります。", "allsnps=TRUE: 모델마다 f2를 다시 계산하므로 오래 걸릴 수 있습니다.", "allsnps=TRUE: f2 dihitung ulang untuk tiap model; bisa lama jika model banyak.")
+add_tr("msg_rot_allsnps_warn", "allsnps=TRUE: genotip bütün modeller için bir kez okunur (bir tam okuma kadar sürer); ardından modeller tek tek uyumlanır.", "allsnps=TRUE: genotypes are read once for all models (as long as one full read); the models are then fitted one by one.", "allsnps=TRUE：所有模型只读取一次基因型（耗时相当于一次完整读取），随后逐个拟合模型。", "allsnps=TRUE: सभी मॉडलों के लिए जीनोटाइप एक बार पढ़े जाते हैं (एक पूर्ण पढ़ने जितना समय); फिर मॉडल एक-एक करके फिट होते हैं।", "allsnps=TRUE: los genotipos se leen una sola vez para todos los modelos (lo que dura una lectura completa); después los modelos se ajustan uno a uno.", "allsnps=TRUE : les génotypes sont lus une seule fois pour tous les modèles (la durée d'une lecture complète) ; les modèles sont ensuite ajustés un par un.", "allsnps=TRUE: تُقرأ الأنماط الجينية مرة واحدة لجميع النماذج (بقدر قراءة كاملة واحدة)، ثم تُلاءَم النماذج واحدًا تلو الآخر.", "allsnps=TRUE: সব মডেলের জন্য জিনোটাইপ একবার পড়া হয় (একটি পূর্ণ পাঠের সমান সময়); তারপর মডেলগুলো একে একে ফিট করা হয়।", "allsnps=TRUE: os genótipos são lidos uma única vez para todos os modelos (o tempo de uma leitura completa); depois os modelos são ajustados um a um.", "allsnps=TRUE: генотипы читаются один раз для всех моделей (как одно полное чтение); затем модели подгоняются по одной.", "allsnps=TRUE: تمام ماڈلز کے لیے جینوٹائپ ایک بار پڑھے جاتے ہیں (ایک مکمل ریڈنگ جتنا وقت)؛ پھر ماڈل ایک ایک کر کے فٹ ہوتے ہیں۔", "allsnps=TRUE: Die Genotypen werden für alle Modelle einmal gelesen (so lange wie ein vollständiger Lesedurchgang); danach werden die Modelle einzeln angepasst.", "allsnps=TRUE: 遺伝子型はすべてのモデルについて 1 回だけ読み込まれます（完全な読み込み 1 回分）。その後モデルを 1 つずつ当てはめます。", "allsnps=TRUE: 모든 모델에 대해 유전형을 한 번만 읽습니다(전체 읽기 1회 분량). 이후 모델을 하나씩 적합합니다.", "allsnps=TRUE: genotipe dibaca sekali untuk semua model (selama satu pembacaan penuh); lalu model disesuaikan satu per satu.")
 add_tr("msg_rot_error", "Rotasyon hatası", "Rotation error", "旋转错误", "रोटेशन त्रुटि", "Error de rotación", "Erreur de rotation", "خطأ في التدوير", "রোটেশন ত্রুটি", "Erro de rotação", "Ошибка ротации", "روٹیشن خرابی", "Rotationsfehler", "ローテーションのエラー", "회전 오류", "Kesalahan rotasi")
 add_tr("msg_rot_stopped", "Rotasyon durduruldu.", "Rotation stopped.", "旋转已停止。", "रोटेशन रोका गया।", "Rotación detenida.", "Rotation arrêtée.", "تم إيقاف التدوير.", "রোটেশন থামানো হয়েছে।", "Rotação parada.", "Ротация остановлена.", "روٹیشن روک دیا گیا۔", "Rotation angehalten.", "ローテーションを停止しました。", "회전 중지됨.", "Rotasi dihentikan.")
 add_tr("msg_rot_done", "Rotasyon bitti: %d model değerlendirildi.", "Rotation finished: %d models evaluated.", "旋转完成：已评估 %d 个模型。", "रोटेशन पूर्ण: %d मॉडल मूल्यांकित।", "Rotación terminada: %d modelos evaluados.", "Rotation terminée : %d modèles évalués.", "انتهى التدوير: تم تقييم %d نموذجًا.", "রোটেশন শেষ: %d মডেল মূল্যায়িত।", "Rotação concluída: %d modelos avaliados.", "Ротация завершена: оценено моделей: %d.", "روٹیشن مکمل: %d ماڈل جانچے گئے۔", "Rotation beendet: %d Modelle ausgewertet.", "ローテーション完了: %d 件のモデルを評価しました。", "회전 완료: %d개 모델 평가됨.", "Rotasi selesai: %d model dievaluasi.")
@@ -4420,6 +4549,24 @@ add_tr("msg_quick_added", "%s → %s listesine eklendi.", "%s added to %s.", "�
 add_tr("paste_replace", "Tümünü değiştir", "Replace all", "全部替换", "सब बदलें", "Reemplazar todo", "Tout remplacer", "استبدال الكل", "সব প্রতিস্থাপন", "Substituir tudo", "Заменить всё", "سب بدلیں", "Alle ersetzen", "すべて置換", "모두 교체", "Ganti semua")
 add_tr("paste_count", "%d popülasyon algılandı, %d tanesi veri setinde.", "%d populations detected, %d in the dataset.", "检测到 %d 个群体，其中 %d 个在数据集中。", "%d आबादियाँ पहचानी गईं, %d डेटासेट में हैं।", "%d poblaciones detectadas, %d en el conjunto de datos.", "%d populations détectées, dont %d dans le jeu de données.", "تم اكتشاف %d مجموعة، منها %d في مجموعة البيانات.", "%dটি জনগোষ্ঠী শনাক্ত, %dটি ডেটাসেটে আছে।", "%d populações detectadas, %d no conjunto de dados.", "Найдено популяций: %d, из них в наборе данных: %d.", "%d آبادیاں شناخت ہوئیں، %d ڈیٹاسیٹ میں ہیں۔", "%d Populationen erkannt, %d davon im Datensatz.", "%d 件の集団を検出、うち %d 件がデータセット内。", "%d개 집단 감지, 그중 %d개가 데이터셋에 있음.", "%d populasi terdeteksi, %d ada di dataset.")
 add_tr("prog_eta", "bu hedef için kalan ~%s", "~%s left for this target", "此目标剩余约 %s", "इस लक्ष्य के लिए शेष ~%s", "quedan ~%s para este objetivo", "reste ~%s pour cette cible", "المتبقي لهذا الهدف ~%s", "এই লক্ষ্যের জন্য বাকি ~%s", "restam ~%s para este alvo", "осталось ~%s для этой цели", "اس ہدف کے لیے باقی ~%s", "noch ~%s für dieses Ziel", "このターゲットの残り約 %s", "이 타깃 남은 시간 ~%s", "sisa ~%s untuk target ini")
+add_tr("prog_pass", "Tek genotip geçişi (%d model) — blok %d / %d", "Single genotype pass (%d model(s)) — block %d / %d", "单次基因型读取（%d 个模型）— 区块 %d / %d", "एकल जीनोटाइप पास (%d मॉडल) — ब्लॉक %d / %d", "Lectura única del genotipo (%d modelo(s)) — bloque %d / %d", "Lecture unique des génotypes (%d modèle(s)) — bloc %d / %d", "قراءة واحدة لملف الأنماط الجينية (%d نموذج) — الكتلة %d / %d", "একক জিনোটাইপ পাঠ (%d মডেল) — ব্লক %d / %d", "Leitura única do genótipo (%d modelo(s)) — bloco %d / %d", "Однократное чтение генотипов (моделей: %d) — блок %d / %d", "جینوٹائپ کی واحد ریڈنگ (%d ماڈل) — بلاک %d / %d", "Einmaliges Lesen der Genotypen (%d Modell(e)) — Block %d / %d", "遺伝子型の一括読み込み（%d モデル）— ブロック %d / %d", "유전형 단일 읽기(%d개 모델) — 블록 %d / %d", "Pembacaan genotipe tunggal (%d model) — blok %d / %d")
+add_tr("prog_pass_start", "Tek genotip geçişi hazırlanıyor (%d model)", "Preparing single genotype pass (%d model(s))", "正在准备单次基因型读取（%d 个模型）", "एकल जीनोटाइप पास की तैयारी (%d मॉडल)", "Preparando la lectura única del genotipo (%d modelo(s))", "Préparation de la lecture unique des génotypes (%d modèle(s))", "تحضير القراءة الواحدة للأنماط الجينية (%d نموذج)", "একক জিনোটাইপ পাঠের প্রস্তুতি (%d মডেল)", "Preparando a leitura única do genótipo (%d modelo(s))", "Подготовка однократного чтения генотипов (моделей: %d)", "جینوٹائپ کی واحد ریڈنگ کی تیاری (%d ماڈل)", "Einmaliges Lesen der Genotypen wird vorbereitet (%d Modell(e))", "遺伝子型の一括読み込みを準備中（%d モデル）", "유전형 단일 읽기 준비 중(%d개 모델)", "Menyiapkan pembacaan genotipe tunggal (%d model)")
+add_tr("stg_fit", "qpAdm uyumu", "qpAdm fit", "qpAdm 拟合", "qpAdm फिट", "ajuste de qpAdm", "ajustement qpAdm", "ملاءمة qpAdm", "qpAdm ফিট", "ajuste do qpAdm", "подгонка qpAdm", "qpAdm فٹ", "qpAdm-Anpassung", "qpAdm の当てはめ", "qpAdm 적합", "penyesuaian qpAdm")
+# v6.5 ADIM 3 (madde 6)
+add_tr("acc_same_sets", "Aynı setleri seç", "Select same sets", "选择相同集合", "समान सेट चुनें", "Seleccionar mismos conjuntos", "Sélectionner les mêmes ensembles", "حدد المجموعات نفسها", "একই সেট নির্বাচন", "Selecionar mesmos conjuntos", "Выбрать те же наборы", "ایک جیسے سیٹ منتخب کریں", "Gleiche Sets auswählen", "同じセットを選択", "같은 세트 선택", "Pilih set yang sama")
+add_tr("acc_bt_show", "Toplu tabloda göster", "Show in batch table", "在批量运行表中显示", "बैच रन तालिका में दिखाएँ", "Mostrar en la tabla por lotes", "Afficher dans le tableau groupé", "اعرض في الجدول الجماعي", "ব্যাচ রানের সারণিতে দেখাও", "Mostrar na tabela em lote", "Показать в таблице пакетного запуска", "بیچ رن جدول میں دکھائیں", "In der Tabelle des Stapellaufs zeigen", "一括実行の表に表示", "일괄 실행 표에 표시", "Tampilkan di tabel proses kelompok")
+add_tr("bt_xlsx", "Tabloyu Excel'e aktar", "Export table to Excel", "将表格导出为 Excel", "तालिका Excel में निर्यात करें", "Exportar tabla a Excel", "Exporter le tableau vers Excel", "صدّر الجدول إلى Excel", "সারণি Excel-এ রপ্তানি করো", "Exportar tabela para Excel", "Экспорт таблицы в Excel", "جدول Excel میں برآمد کریں", "Tabelle nach Excel exportieren", "表を Excel に書き出す", "표를 Excel로 내보내기", "Ekspor tabel ke Excel")
+add_tr("bts_note", "Seçili %d model gösteriliyor (Biriken modeller).", "Showing %d selected models (Accumulated models).", "正在显示 %d 个所选模型（已累积模型）。", "%d चयनित मॉडल दिखाए जा रहे हैं (संचित मॉडल)।", "Se muestran %d modelos seleccionados (Modelos acumulados).", "%d modèles sélectionnés affichés (Modèles accumulés).", "يُعرض %d من النماذج المحددة (النماذج المتراكمة).", "%dটি নির্বাচিত মডেল দেখানো হচ্ছে (সঞ্চিত মডেল)।", "Mostrando %d modelos selecionados (Modelos acumulados).", "Показаны выбранные модели: %d (Накопленные модели).", "%d منتخب ماڈل دکھائے جا رہے ہیں (جمع شدہ ماڈلز)۔", "%d ausgewählte Modelle werden angezeigt (Gesammelte Modelle).", "選択した %d モデルを表示中（蓄積したモデル）。", "선택한 모델 %d개 표시 중(누적 모델).", "Menampilkan %d model terpilih (Model terkumpul).")
+add_tr("bt_back", "Koşu tablosuna dön", "Back to the run table", "返回运行表", "रन तालिका पर लौटें", "Volver a la tabla de la ejecución", "Revenir au tableau de l'exécution", "العودة إلى جدول التشغيل", "রানের সারণিতে ফিরে যাও", "Voltar à tabela da execução", "Вернуться к таблице запуска", "رن جدول پر واپس جائیں", "Zurück zur Tabelle des Laufs", "実行の表に戻る", "실행 표로 돌아가기", "Kembali ke tabel proses")
+add_tr("bts_need2", "Toplu tabloda göstermek için en az iki model seç.", "Select at least two models to show in the batch table.", "请至少选择两个模型以在批量运行表中显示。", "बैच रन तालिका में दिखाने के लिए कम से कम दो मॉडल चुनें।", "Selecciona al menos dos modelos para mostrarlos en la tabla por lotes.", "Sélectionnez au moins deux modèles à afficher dans le tableau groupé.", "حدد نموذجين على الأقل لعرضهما في الجدول الجماعي.", "ব্যাচ রানের সারণিতে দেখাতে অন্তত দুটি মডেল নির্বাচন করো।", "Selecione pelo menos dois modelos para mostrar na tabela em lote.", "Выберите не менее двух моделей для показа в таблице пакетного запуска.", "بیچ رن جدول میں دکھانے کے لیے کم از کم دو ماڈل منتخب کریں۔", "Wählen Sie mindestens zwei Modelle für die Tabelle des Stapellaufs aus.", "一括実行の表に表示するには 2 つ以上のモデルを選択してください。", "일괄 실행 표에 표시하려면 모델을 두 개 이상 선택하세요.", "Pilih minimal dua model untuk ditampilkan di tabel proses kelompok.")
+add_tr("bts_mode", "allsnps farklı: %s / %s", "allsnps differs: %s / %s", "allsnps 不同：%s / %s", "allsnps अलग है: %s / %s", "allsnps distinto: %s / %s", "allsnps différent : %s / %s", "allsnps مختلف: %s / %s", "allsnps ভিন্ন: %s / %s", "allsnps diferente: %s / %s", "allsnps различается: %s / %s", "allsnps مختلف ہے: %s / %s", "allsnps unterschiedlich: %s / %s", "allsnps が異なる: %s / %s", "allsnps 다름: %s / %s", "allsnps berbeda: %s / %s")
+add_tr("bts_maxmiss", "maxmiss farklı: %s / %s", "maxmiss differs: %s / %s", "maxmiss 不同：%s / %s", "maxmiss अलग है: %s / %s", "maxmiss distinto: %s / %s", "maxmiss différent : %s / %s", "maxmiss مختلف: %s / %s", "maxmiss ভিন্ন: %s / %s", "maxmiss diferente: %s / %s", "maxmiss различается: %s / %s", "maxmiss مختلف ہے: %s / %s", "maxmiss unterschiedlich: %s / %s", "maxmiss が異なる: %s / %s", "maxmiss 다름: %s / %s", "maxmiss berbeda: %s / %s")
+add_tr("bts_right", "Right etiketleri farklı: %s", "Right labels differ: %s", "Right 标签不同：%s", "Right लेबल अलग हैं: %s", "Etiquetas Right distintas: %s", "Étiquettes Right différentes : %s", "تسميات Right مختلفة: %s", "Right লেবেল ভিন্ন: %s", "Rótulos Right diferentes: %s", "Метки Right различаются: %s", "Right لیبل مختلف ہیں: %s", "Right-Labels unterschiedlich: %s", "Right ラベルが異なる: %s", "Right 레이블 다름: %s", "Label Right berbeda: %s")
+add_tr("bts_left", "Left etiketleri farklı: %s", "Left labels differ: %s", "Left 标签不同：%s", "Left लेबल अलग हैं: %s", "Etiquetas Left distintas: %s", "Étiquettes Left différentes : %s", "تسميات Left مختلفة: %s", "Left লেবেল ভিন্ন: %s", "Rótulos Left diferentes: %s", "Метки Left различаются: %s", "Left لیبل مختلف ہیں: %s", "Left-Labels unterschiedlich: %s", "Left ラベルが異なる: %s", "Left 레이블 다름: %s", "Label Left berbeda: %s")
+add_tr("bts_ids", "%s: %d birey / %d birey", "%s: %d individuals / %d individuals", "%s：%d 个个体 / %d 个个体", "%s: %d व्यक्ति / %d व्यक्ति", "%s: %d individuos / %d individuos", "%s : %d individus / %d individus", "%s: %d فردًا / %d فردًا", "%s: %d জন / %d জন", "%s: %d indivíduos / %d indivíduos", "%s: %d особей / %d особей", "%s: %d افراد / %d افراد", "%s: %d Individuen / %d Individuen", "%s: %d 個体 / %d 個体", "%s: %d개체 / %d개체", "%s: %d individu / %d individu")
+add_tr("bts_ids_n", "%s: aynı sayıda (%d) ama farklı bireyler", "%s: same number (%d) but different individuals", "%s：数量相同（%d），但个体不同", "%s: संख्या समान (%d) पर व्यक्ति अलग", "%s: mismo número (%d) pero individuos distintos", "%s : même nombre (%d) mais individus différents", "%s: العدد نفسه (%d) لكن الأفراد مختلفون", "%s: সংখ্যা একই (%d) কিন্তু ব্যক্তিরা ভিন্ন", "%s: mesmo número (%d), mas indivíduos diferentes", "%s: то же число (%d), но другие особи", "%s: تعداد ایک جیسی (%d) مگر افراد مختلف", "%s: gleiche Anzahl (%d), aber andere Individuen", "%s: 数は同じ（%d）だが個体が異なる", "%s: 수는 같지만(%d) 개체가 다름", "%s: jumlah sama (%d) tetapi individu berbeda")
+add_tr("bts_same_n", "Aynı setlerle %d model seçildi.", "%d models with the same sets selected.", "已选择 %d 个集合相同的模型。", "समान सेट वाले %d मॉडल चुने गए।", "Se seleccionaron %d modelos con los mismos conjuntos.", "%d modèles avec les mêmes ensembles sélectionnés.", "تم تحديد %d من النماذج بالمجموعات نفسها.", "একই সেটের %dটি মডেল নির্বাচিত হয়েছে।", "%d modelos com os mesmos conjuntos selecionados.", "Выбраны модели с теми же наборами: %d.", "ایک جیسے سیٹ والے %d ماڈل منتخب ہوئے۔", "%d Modelle mit gleichen Sets ausgewählt.", "同じセットのモデルを %d 件選択しました。", "같은 세트의 모델 %d개를 선택했습니다.", "%d model dengan set yang sama dipilih.")
+add_tr("bts_pick_ref", "Önce referans olacak bir model seç.", "Select a reference model first.", "请先选择一个参考模型。", "पहले एक संदर्भ मॉडल चुनें।", "Selecciona primero un modelo de referencia.", "Sélectionnez d'abord un modèle de référence.", "حدد نموذجًا مرجعيًا أولًا.", "আগে একটি রেফারেন্স মডেল নির্বাচন করো।", "Selecione primeiro um modelo de referência.", "Сначала выберите эталонную модель.", "پہلے ایک حوالہ ماڈل منتخب کریں۔", "Wählen Sie zuerst ein Referenzmodell aus.", "まず基準となるモデルを選択してください。", "먼저 기준 모델을 선택하세요.", "Pilih model acuan terlebih dahulu.")
 add_tr("fst_settings_used", "Bu tablonun ayarları", "Settings of this table", "此表的设置", "इस तालिका की सेटिंग्स", "Ajustes de esta tabla", "Réglages de ce tableau", "إعدادات هذا الجدول", "এই টেবিলের সেটিংস", "Configurações desta tabela", "Настройки этой таблицы", "اس جدول کی ترتیبات", "Einstellungen dieser Tabelle", "この表の設定", "이 표의 설정", "Pengaturan tabel ini")
 add_tr("fst_stale", "Ayarlar değişti: tablo yukarıdaki (önceki) ayarlarla üretildi. Yeni ayarlarla sonuç için yeniden çalıştır.", "Settings have changed: this table was produced with the (previous) settings shown above. Run again for results with the new settings.", "设置已更改：此表是用上方显示的（先前）设置生成的。请重新运行以获得新设置下的结果。", "सेटिंग्स बदल गई हैं: यह तालिका ऊपर दिखाई गई (पिछली) सेटिंग्स से बनी है। नई सेटिंग्स के परिणाम के लिए फिर से चलाएँ।", "Los ajustes han cambiado: esta tabla se generó con los ajustes (anteriores) mostrados arriba. Vuelve a ejecutar para obtener resultados con los nuevos ajustes.", "Les réglages ont changé : ce tableau a été produit avec les réglages (précédents) indiqués ci-dessus. Relancez pour obtenir des résultats avec les nouveaux réglages.", "تغيّرت الإعدادات: أُنتج هذا الجدول بالإعدادات (السابقة) المعروضة أعلاه. أعد التشغيل للحصول على نتائج بالإعدادات الجديدة.", "সেটিংস বদলেছে: এই টেবিল ওপরে দেখানো (আগের) সেটিংসে তৈরি। নতুন সেটিংসে ফল পেতে আবার চালান।", "As configurações mudaram: esta tabela foi gerada com as configurações (anteriores) mostradas acima. Execute novamente para obter resultados com as novas configurações.", "Настройки изменились: эта таблица получена с (прежними) настройками, указанными выше. Запустите снова, чтобы получить результат с новыми настройками.", "ترتیبات بدل گئی ہیں: یہ جدول اوپر دکھائی گئی (پچھلی) ترتیبات سے بنا ہے۔ نئی ترتیبات کے نتائج کے لیے دوبارہ چلائیں۔", "Die Einstellungen wurden geändert: Diese Tabelle wurde mit den oben gezeigten (vorherigen) Einstellungen erstellt. Für Ergebnisse mit den neuen Einstellungen erneut ausführen.", "設定が変更されました。この表は上に示した（以前の）設定で作成されています。新しい設定の結果を得るには再実行してください。", "설정이 변경되었습니다. 이 표는 위에 표시된 (이전) 설정으로 생성되었습니다. 새 설정의 결과를 얻으려면 다시 실행하세요.", "Pengaturan telah berubah: tabel ini dibuat dengan pengaturan (sebelumnya) di atas. Jalankan lagi untuk hasil dengan pengaturan baru.")
 add_tr("fst_pseudohaploid_hint", "Olası neden: çiftte tek örnekli pseudohaploid bir popülasyon var; adjust_pseudohaploid açıkken bu örnek tek alel sayılır ve tahmin yapılamaz. adjust_pseudohaploid'i kapatıp yeniden çalıştır.", "Likely cause: the pair contains a single-sample pseudohaploid population; with adjust_pseudohaploid on, that sample counts as one allele and no estimate is possible. Turn adjust_pseudohaploid off and run again.", "可能原因：该组合中有一个单样本的伪单倍体群体；开启 adjust_pseudohaploid 时该样本按一个等位基因计，无法估计。请关闭 adjust_pseudohaploid 后重新运行。", "संभावित कारण: जोड़ी में एकल-नमूना pseudohaploid आबादी है; adjust_pseudohaploid चालू होने पर वह नमूना एक एलील गिना जाता है और अनुमान संभव नहीं होता। adjust_pseudohaploid बंद करके फिर चलाएँ।", "Causa probable: el par incluye una población pseudohaploide de una sola muestra; con adjust_pseudohaploid activado, esa muestra cuenta como un solo alelo y no hay estimación posible. Desactiva adjust_pseudohaploid y vuelve a ejecutar.", "Cause probable : la paire contient une population pseudo-haploïde à un seul échantillon ; avec adjust_pseudohaploid activé, cet échantillon compte pour un seul allèle et aucune estimation n’est possible. Désactivez adjust_pseudohaploid et relancez.", "السبب المحتمل: يضم الزوج مجموعة شبه أحادية الصيغة بعينة واحدة؛ عند تفعيل adjust_pseudohaploid تُحسب هذه العينة أليلاً واحداً ولا يمكن التقدير. أوقف adjust_pseudohaploid ثم أعد التشغيل.", "সম্ভাব্য কারণ: জোড়ায় এক-নমুনার pseudohaploid জনগোষ্ঠী আছে; adjust_pseudohaploid চালু থাকলে নমুনাটি একটি অ্যালিল হিসেবে গণ্য হয় এবং অনুমান সম্ভব নয়। adjust_pseudohaploid বন্ধ করে আবার চালান।", "Causa provável: o par contém uma população pseudo-haploide de amostra única; com adjust_pseudohaploid ligado, essa amostra conta como um único alelo e não há estimativa possível. Desligue adjust_pseudohaploid e execute novamente.", "Вероятная причина: в паре есть псевдогаплоидная популяция из одного образца; при включённом adjust_pseudohaploid этот образец считается одним аллелем, и оценка невозможна. Отключите adjust_pseudohaploid и запустите снова.", "ممکنہ وجہ: جوڑے میں ایک نمونے والی pseudohaploid آبادی ہے؛ adjust_pseudohaploid آن ہونے پر یہ نمونہ ایک ایلیل گنا جاتا ہے اور تخمینہ ممکن نہیں۔ adjust_pseudohaploid بند کر کے دوبارہ چلائیں۔", "Wahrscheinliche Ursache: Das Paar enthält eine pseudohaploide Population mit nur einer Probe; bei eingeschaltetem adjust_pseudohaploid zählt diese Probe als ein Allel, eine Schätzung ist nicht möglich. adjust_pseudohaploid ausschalten und erneut ausführen.", "考えられる原因：組に単一試料の擬似半数体集団が含まれています。adjust_pseudohaploid がオンだとその試料は1アレルとして数えられ、推定できません。adjust_pseudohaploid をオフにして再実行してください。", "가능한 원인: 쌍에 단일 표본 의사반수체 집단이 있습니다. adjust_pseudohaploid가 켜져 있으면 이 표본은 대립유전자 하나로 계산되어 추정할 수 없습니다. adjust_pseudohaploid를 끄고 다시 실행하세요.", "Kemungkinan penyebab: pasangan berisi populasi pseudohaploid satu sampel; dengan adjust_pseudohaploid aktif, sampel itu dihitung satu alel sehingga estimasi tidak mungkin. Matikan adjust_pseudohaploid lalu jalankan lagi.")
@@ -4486,7 +4633,7 @@ add_tr("split_info", "%d etiket → %d birey (%d hedef)", "%d label(s) → %d in
 add_tr("split_title", "Yük uyarısı: Etiketi bireylere ayır", "Load warning: Split label into individuals", "负载警告：将标签拆分为个体", "भार चेतावनी: लेबल को व्यक्तियों में बाँटें", "Aviso de carga: Dividir la etiqueta en individuos", "Avertissement de charge : Scinder l'étiquette en individus", "تحذير الحمل: قسّم التسمية إلى أفراد", "লোড সতর্কতা: লেবেলকে ব্যক্তিতে ভাগ করুন", "Aviso de carga: Dividir o rótulo em indivíduos", "Предупреждение о нагрузке: Разделить метку на особей", "بوجھ کی تنبیہ: لیبل کو افراد میں تقسیم کریں", "Lastwarnung: Label in Individuen aufteilen", "負荷の警告: ラベルを個体に分割", "부하 경고: 라벨을 개체로 나누기", "Peringatan beban: Pecah label menjadi individu")
 add_tr("split_body", "Target'ta %d etiketten %d bireysel hedef var; her biri ayrı bir qpAdm modeli olur (toplam %d model).", "Target holds individual targets from %d label(s): %d individuals; each becomes a separate qpAdm model (%d models in total).", "Target 中有来自 %d 个标签的个体目标，共 %d 个个体；每个个体都是一个独立的 qpAdm 模型（共 %d 个模型）。", "Target में %d लेबल से व्यक्तिगत लक्ष्य हैं: %d व्यक्ति; हर एक अलग qpAdm मॉडल बनता है (कुल %d मॉडल)।", "Target contiene objetivos individuales de %d etiqueta(s): %d individuos; cada uno es un modelo qpAdm aparte (%d modelos en total).", "Target contient des cibles individuelles issues de %d étiquette(s) : %d individus ; chacun devient un modèle qpAdm distinct (%d modèles au total).", "يحتوي Target على أهداف فردية من %d تسمية: %d فرداً؛ يصبح كل منهم نموذج qpAdm مستقلاً (%d نموذجاً إجمالاً).", "Target-এ %d লেবেল থেকে ব্যক্তিগত লক্ষ্য আছে: %d ব্যক্তি; প্রতিটি আলাদা qpAdm মডেল হয় (মোট %d মডেল)।", "Target contém alvos individuais de %d rótulo(s): %d indivíduos; cada um vira um modelo qpAdm separado (%d modelos no total).", "В Target есть индивидуальные цели из %d меток: %d особей; каждая становится отдельной моделью qpAdm (всего %d моделей).", "Target میں %d لیبل سے انفرادی اہداف ہیں: %d افراد؛ ہر ایک الگ qpAdm ماڈل بنتا ہے (کل %d ماڈل)۔", "Target enthält Einzelziele aus %d Label(s): %d Individuen; jedes wird ein eigenes qpAdm-Modell (insgesamt %d Modelle).", "Target には %d 個のラベルからの個体ターゲットがあります: %d 個体。各個体が別々の qpAdm モデルになります（合計 %d モデル）。", "Target에 %d개 라벨에서 온 개별 대상이 있습니다: %d개체. 각각 별도의 qpAdm 모델이 됩니다(총 %d개 모델).", "Target berisi target individual dari %d label: %d individu; masing-masing menjadi model qpAdm terpisah (total %d model).")
 add_tr("split_false", "allsnps=FALSE: f2 havuzu %d popülasyonla kurulur (hedefler + Left + Right). extract_f2 işi bölmeden yaklaşık %s bellek ister; admixtools bellek sınırını aşan işi parçalara böler, süre uzar. Havuz diskte yaklaşık %s yer tutar.", "allsnps=FALSE: the f2 pool is built with %d populations (targets + Left + Right). Without splitting the work, extract_f2 needs about %s of memory; admixtools splits work above its memory limit, which takes longer. The pool takes about %s on disk.", "allsnps=FALSE：f2 池将以 %d 个群体构建（目标 + Left + Right）。不拆分时 extract_f2 约需 %s 内存；超过内存上限时 admixtools 会分块计算，耗时更长。该池在磁盘上约占 %s。", "allsnps=FALSE: f2 पूल %d आबादियों से बनेगा (लक्ष्य + Left + Right)। काम बाँटे बिना extract_f2 को लगभग %s मेमोरी चाहिए; मेमोरी सीमा से ऊपर admixtools काम को टुकड़ों में बाँटता है, जिससे समय बढ़ता है। पूल डिस्क पर लगभग %s लेगा।", "allsnps=FALSE: el pool f2 se construye con %d poblaciones (objetivos + Left + Right). Sin dividir el trabajo, extract_f2 necesita unos %s de memoria; admixtools divide el trabajo que supera su límite de memoria y tarda más. El pool ocupa unos %s en disco.", "allsnps=FALSE : le pool f2 est construit avec %d populations (cibles + Left + Right). Sans découpage, extract_f2 demande environ %s de mémoire ; admixtools découpe le travail au-delà de sa limite de mémoire, ce qui prend plus de temps. Le pool occupe environ %s sur disque.", "allsnps=FALSE: يُبنى مجمع f2 بـ %d مجموعة سكانية (الأهداف + Left + Right). دون تقسيم العمل يحتاج extract_f2 إلى نحو %s من الذاكرة؛ يقسم admixtools العمل الذي يتجاوز حد الذاكرة فيطول الوقت. يشغل المجمع نحو %s على القرص.", "allsnps=FALSE: f2 পুল %d জনগোষ্ঠী নিয়ে তৈরি হবে (লক্ষ্য + Left + Right)। কাজ ভাগ না করলে extract_f2-এর প্রায় %s মেমরি লাগে; মেমরি সীমা ছাড়ালে admixtools কাজ ভাগ করে, সময় বাড়ে। পুল ডিস্কে প্রায় %s জায়গা নেবে।", "allsnps=FALSE: o pool f2 é construído com %d populações (alvos + Left + Right). Sem dividir o trabalho, o extract_f2 precisa de cerca de %s de memória; o admixtools divide o trabalho acima do limite de memória, o que demora mais. O pool ocupa cerca de %s em disco.", "allsnps=FALSE: пул f2 строится для %d популяций (цели + Left + Right). Без разбиения extract_f2 требует около %s памяти; сверх лимита памяти admixtools делит работу на части, что дольше. Пул займёт на диске около %s.", "allsnps=FALSE: f2 پول %d آبادیوں سے بنے گا (اہداف + Left + Right)۔ کام تقسیم کیے بغیر extract_f2 کو تقریباً %s میموری چاہیے؛ میموری حد سے اوپر admixtools کام کو حصوں میں بانٹتا ہے جس سے وقت بڑھتا ہے۔ پول ڈسک پر تقریباً %s جگہ لے گا۔", "allsnps=FALSE: Der f2-Pool wird mit %d Populationen gebaut (Ziele + Left + Right). Ohne Aufteilung braucht extract_f2 etwa %s Arbeitsspeicher; oberhalb des Speicherlimits teilt admixtools die Arbeit auf, was länger dauert. Der Pool belegt auf der Festplatte etwa %s.", "allsnps=FALSE: f2 プールは %d 集団（ターゲット + Left + Right）で作成されます。分割しない場合 extract_f2 には約 %s のメモリが必要です。メモリ上限を超えると admixtools は処理を分割し、時間が長くなります。プールのディスク使用量は約 %s です。", "allsnps=FALSE: f2 풀은 집단 %d개(대상 + Left + Right)로 만들어집니다. 작업을 나누지 않으면 extract_f2에 약 %s 메모리가 필요하며, 메모리 한도를 넘으면 admixtools가 작업을 나눠 시간이 길어집니다. 풀은 디스크에서 약 %s를 차지합니다.", "allsnps=FALSE: pool f2 dibangun dengan %d populasi (target + Left + Right). Tanpa membagi pekerjaan, extract_f2 butuh sekitar %s memori; di atas batas memorinya admixtools membagi pekerjaan sehingga lebih lama. Pool memakan sekitar %s di disk.")
-add_tr("split_true", "allsnps=TRUE: her hedef için genotip dosyası baştan okunur. Bu sette hedef başına kaba tahmin %s, toplam yaklaşık %s (ölçüm: 14,4 GB'lık .bed'de bir hedef 4,7 dk).", "allsnps=TRUE: the genotype file is read again for every target. For this set, a rough estimate is %s per target, about %s in total (measured: one target took 4.7 min with a 14.4 GB .bed).", "allsnps=TRUE：每个目标都会重新读取基因型文件。此数据集粗略估计每个目标 %s，总计约 %s（实测：14.4 GB 的 .bed 一个目标用时 4.7 分钟）。", "allsnps=TRUE: हर लक्ष्य के लिए जीनोटाइप फ़ाइल फिर से पढ़ी जाती है। इस सेट में मोटा अनुमान प्रति लक्ष्य %s, कुल लगभग %s (माप: 14.4 GB .bed में एक लक्ष्य 4.7 मिनट)।", "allsnps=TRUE: el archivo de genotipos se vuelve a leer para cada objetivo. En este conjunto, estimación aproximada de %s por objetivo, unos %s en total (medido: un objetivo tardó 4,7 min con un .bed de 14,4 GB).", "allsnps=TRUE : le fichier de génotypes est relu pour chaque cible. Pour ce jeu, estimation grossière de %s par cible, environ %s au total (mesuré : une cible a pris 4,7 min avec un .bed de 14,4 Go).", "allsnps=TRUE: يُقرأ ملف الأنماط الجينية من جديد لكل هدف. في هذه المجموعة تقدير تقريبي %s لكل هدف، ونحو %s إجمالًا (قياس: استغرق هدف واحد 4.7 دقيقة مع ملف .bed بحجم 14.4 GB).", "allsnps=TRUE: প্রতিটি লক্ষ্যের জন্য জেনোটাইপ ফাইল আবার পড়া হয়। এই সেটে মোটামুটি অনুমান লক্ষ্যপ্রতি %s, মোট প্রায় %s (মাপ: 14.4 GB .bed-এ একটি লক্ষ্য 4.7 মিনিট)।", "allsnps=TRUE: o arquivo de genótipos é lido de novo para cada alvo. Neste conjunto, estimativa grosseira de %s por alvo, cerca de %s no total (medido: um alvo levou 4,7 min com um .bed de 14,4 GB).", "allsnps=TRUE: файл генотипов читается заново для каждой цели. Для этого набора грубая оценка %s на цель, всего около %s (измерено: одна цель заняла 4,7 мин при .bed 14,4 ГБ).", "allsnps=TRUE: ہر ہدف کے لیے جینوٹائپ فائل دوبارہ پڑھی جاتی ہے۔ اس سیٹ میں موٹا اندازہ فی ہدف %s، کل تقریباً %s (پیمائش: 14.4 GB کی .bed میں ایک ہدف 4.7 منٹ)۔", "allsnps=TRUE: Die Genotypdatei wird für jedes Ziel neu gelesen. Für dieses Set grob geschätzt %s pro Ziel, insgesamt etwa %s (gemessen: ein Ziel brauchte 4,7 min bei einer 14,4-GB-.bed).", "allsnps=TRUE: ターゲットごとに遺伝子型ファイルを読み直します。このセットではターゲットあたりの概算 %s、合計約 %s（実測: 14.4 GB の .bed で 1 ターゲット 4.7 分）。", "allsnps=TRUE: 대상마다 유전자형 파일을 다시 읽습니다. 이 세트에서 대략 대상당 %s, 전체 약 %s입니다(측정: 14.4 GB .bed에서 대상 하나에 4.7분).", "allsnps=TRUE: berkas genotipe dibaca ulang untuk setiap target. Untuk set ini, perkiraan kasar %s per target, sekitar %s total (terukur: satu target 4,7 menit dengan .bed 14,4 GB).")
+add_tr("split_true", "allsnps=TRUE: genotip dosyası bütün hedefler için tek geçişte bir kez okunur. Bu sette kaba tahmin yaklaşık %s (ölçüm: 14,4 GB'lık .bed'de bir geçiş 1,8–3,4 dk).", "allsnps=TRUE: the genotype file is read once, in a single pass, for all targets. For this set, a rough estimate is about %s (measured: one pass took 1.8–3.4 min with a 14.4 GB .bed).", "allsnps=TRUE：所有目标只需一次读取基因型文件。此数据集粗略估计约 %s（实测：14.4 GB 的 .bed 一次读取用时 1.8–3.4 分钟）。", "allsnps=TRUE: सभी लक्ष्यों के लिए जीनोटाइप फ़ाइल एक ही बार में पढ़ी जाती है। इस सेट में मोटा अनुमान लगभग %s (माप: 14.4 GB .bed में एक पास 1.8–3.4 मिनट)।", "allsnps=TRUE: el archivo de genotipos se lee una sola vez para todos los objetivos. En este conjunto, estimación aproximada de unos %s (medido: una lectura tardó 1,8–3,4 min con un .bed de 14,4 GB).", "allsnps=TRUE : le fichier de génotypes est lu une seule fois pour toutes les cibles. Pour ce jeu, estimation grossière d'environ %s (mesuré : une lecture a pris 1,8–3,4 min avec un .bed de 14,4 Go).", "allsnps=TRUE: يُقرأ ملف الأنماط الجينية مرة واحدة لجميع الأهداف. التقدير التقريبي لهذه المجموعة نحو %s (قياس: استغرقت القراءة الواحدة 1.8–3.4 دقيقة مع ملف .bed بحجم 14.4 GB).", "allsnps=TRUE: সব লক্ষ্যের জন্য জেনোটাইপ ফাইল একবারেই পড়া হয়। এই সেটে মোটামুটি অনুমান প্রায় %s (মাপ: 14.4 GB .bed-এ একবার পাঠে 1.8–3.4 মিনিট)।", "allsnps=TRUE: o arquivo de genótipos é lido uma única vez para todos os alvos. Neste conjunto, estimativa grosseira de cerca de %s (medido: uma leitura levou 1,8–3,4 min com um .bed de 14,4 GB).", "allsnps=TRUE: файл генотипов читается один раз для всех целей. Для этого набора грубая оценка около %s (измерено: одно чтение заняло 1,8–3,4 мин при .bed 14,4 ГБ).", "allsnps=TRUE: تمام اہداف کے لیے جینوٹائپ فائل ایک ہی بار پڑھی جاتی ہے۔ اس سیٹ میں موٹا اندازہ تقریباً %s (پیمائش: 14.4 GB کی .bed میں ایک ریڈنگ 1.8–3.4 منٹ)۔", "allsnps=TRUE: Die Genotypdatei wird für alle Ziele nur einmal gelesen. Für dieses Set grob geschätzt etwa %s (gemessen: ein Lesedurchgang brauchte 1,8–3,4 min bei einer 14,4-GB-.bed).", "allsnps=TRUE: すべてのターゲットについて遺伝子型ファイルを1回だけ読み込みます。このセットの概算は約 %s（実測: 14.4 GB の .bed で1回の読み込み 1.8–3.4 分）。", "allsnps=TRUE: 모든 대상에 대해 유전자형 파일을 한 번만 읽습니다. 이 세트에서 대략 약 %s입니다(측정: 14.4 GB .bed에서 한 번 읽기에 1.8–3.4분).", "allsnps=TRUE: berkas genotipe dibaca satu kali untuk semua target. Untuk set ini, perkiraan kasar sekitar %s (terukur: satu kali baca 1,8–3,4 menit dengan .bed 14,4 GB).")
 add_tr("split_stop", "Sınır yok; koşu Durdur düğmesiyle her an kesilebilir.", "No limit; the run can be stopped at any time with the Stop button.", "没有上限；可随时用“停止”按钮中止运行。", "कोई सीमा नहीं; रन को कभी भी रोकें बटन से रोका जा सकता है।", "Sin límite; la ejecución puede detenerse en cualquier momento con el botón Detener.", "Aucune limite ; l'exécution peut être arrêtée à tout moment avec le bouton Arrêter.", "لا حد؛ يمكن إيقاف التشغيل في أي وقت بزر الإيقاف.", "কোনো সীমা নেই; থামান বোতাম দিয়ে যেকোনো সময় রান থামানো যায়।", "Sem limite; a execução pode ser interrompida a qualquer momento com o botão Parar.", "Ограничения нет; запуск можно остановить в любой момент кнопкой «Стоп».", "کوئی حد نہیں؛ رن کو کسی بھی وقت روکیں بٹن سے روکا جا سکتا ہے۔", "Keine Grenze; der Lauf kann jederzeit mit der Stopp-Taste abgebrochen werden.", "上限はありません。実行は「停止」ボタンでいつでも中止できます。", "제한은 없으며 실행은 언제든 중지 버튼으로 멈출 수 있습니다.", "Tanpa batas; proses dapat dihentikan kapan saja dengan tombol Berhenti.")
 add_tr("split_go", "Devam et", "Continue", "继续", "जारी रखें", "Continuar", "Continuer", "متابعة", "চালিয়ে যান", "Continuar", "Продолжить", "جاری رکھیں", "Fortfahren", "続行", "계속", "Lanjutkan")
 add_tr("split_renamed", "%d bireysel ad diske yazılamadığı ya da başka bir etiketle çakıştığı için değiştirildi (ör. %s).", "%d individual name(s) were changed because they could not be written to disk or clashed with another label (e.g. %s).", "%d 个个体名称因无法写入磁盘或与其他标签冲突而被修改（例如 %s）。", "%d व्यक्तिगत नाम बदले गए क्योंकि वे डिस्क पर नहीं लिखे जा सकते थे या किसी अन्य लेबल से टकराते थे (उदा. %s)।", "Se cambiaron %d nombres individuales porque no podían escribirse en disco o coincidían con otra etiqueta (p. ej. %s).", "%d nom(s) individuel(s) ont été modifiés car ils ne pouvaient pas être écrits sur disque ou entraient en conflit avec une autre étiquette (ex. %s).", "غُيّر %d من أسماء الأفراد لأنها لا تُكتب على القرص أو تتعارض مع تسمية أخرى (مثل %s).", "%d ব্যক্তিগত নাম বদলানো হয়েছে কারণ ডিস্কে লেখা যেত না বা অন্য লেবেলের সাথে মিলে যাচ্ছিল (যেমন %s)।", "%d nome(s) individual(is) foram alterados porque não podiam ser gravados em disco ou colidiam com outro rótulo (ex.: %s).", "Изменено индивидуальных имён: %d — их нельзя записать на диск или они совпадали с другой меткой (напр. %s).", "%d انفرادی نام بدلے گئے کیونکہ وہ ڈسک پر نہیں لکھے جا سکتے تھے یا کسی اور لیبل سے ٹکراتے تھے (مثلاً %s)۔", "%d Einzelnamen wurden geändert, weil sie nicht auf die Festplatte geschrieben werden konnten oder mit einem anderen Label kollidierten (z. B. %s).", "%d 件の個体名を変更しました。ディスクに書けないか、別のラベルと重複したためです（例: %s）。", "개체 이름 %d개를 바꿨습니다. 디스크에 쓸 수 없거나 다른 라벨과 겹쳤기 때문입니다(예: %s).", "%d nama individu diubah karena tidak bisa ditulis ke disk atau bentrok dengan label lain (mis. %s).")
@@ -4574,7 +4721,7 @@ add_tr("k9_missing", "Listedeki şu etiketler artık yok: %s. Koşu başlamadı.
 add_tr("k9_load_title", "Yük uyarısı: Sıralı model", "Load warning: Sequential models", "负载警告：顺序模型", "भार चेतावनी: क्रमिक मॉडल", "Aviso de carga: Modelos secuenciales", "Avertissement de charge : Modèles séquentiels", "تحذير الحمل: نماذج متتابعة", "লোড সতর্কতা: ক্রমিক মডেল", "Aviso de carga: Modelos sequenciais", "Предупреждение о нагрузке: последовательные модели", "بوجھ کی تنبیہ: ترتیب وار ماڈل", "Lastwarnung: Sequenzielle Modelle", "負荷の警告: 順次モデル", "부하 경고: 순차 모델", "Peringatan beban: Model berurutan")
 add_tr("k9_load_body", "%d model sırayla koşacak; birleşik pop sayısı %d (target + Left setlerinin birleşimi + Right).", "%d models will run in turn; combined population count %d (target + union of the Left sets + Right).", "将依次运行 %d 个模型；合并后的群体数为 %d（target + 所有 Left 集的并集 + Right）。", "%d मॉडल क्रम से चलेंगे; संयुक्त पॉप संख्या %d (target + Left सेटों का संघ + Right)।", "Se ejecutarán %d modelos por turno; número combinado de poblaciones %d (target + unión de los conjuntos Left + Right).", "%d modèles vont s'exécuter tour à tour ; nombre combiné de populations %d (cible + union des ensembles Left + Right).", "سيعمل %d نموذجًا بالتتابع؛ عدد المجموعات المجمّع %d (الهدف + اتحاد مجموعات Left + Right).", "%d মডেল পরপর চলবে; সম্মিলিত পপ সংখ্যা %d (target + Left সেটগুলোর মিলন + Right)।", "%d modelos vão rodar em sequência; número combinado de populações %d (target + união dos conjuntos Left + Right).", "По очереди будет запущено моделей: %d; общее число популяций %d (target + объединение наборов Left + Right).", "%d ماڈل باری باری چلیں گے؛ مجموعی پاپ تعداد %d (target + Left سیٹوں کا اتحاد + Right)۔", "%d Modelle laufen nacheinander; kombinierte Populationszahl %d (Target + Vereinigung der Left-Sets + Right).", "%d モデルを順に実行します。統合した集団数は %d（target + Left セットの和集合 + Right）。", "%d개 모델이 차례로 실행됩니다. 합친 집단 수 %d(target + Left 세트 합집합 + Right).", "%d model akan dijalankan bergantian; jumlah populasi gabungan %d (target + gabungan set Left + Right).")
 add_tr("k9_load_false", "allsnps=FALSE: bütün modeller tek f2 havuzunu kullanır; havuz %d popülasyonla kurulur. Havuz hazır değilse extract_f2 işi bölmeden yaklaşık %s bellek ister (admixtools sınırı aşan işi parçalara böler, süre uzar); havuz diskte yaklaşık %s yer tutar.", "allsnps=FALSE: all models use one f2 pool, built with %d populations. If the pool is not ready, extract_f2 needs about %s of memory without splitting the work (admixtools splits work that exceeds its limit, which takes longer); the pool takes about %s on disk.", "allsnps=FALSE：所有模型共用一个 f2 池，池由 %d 个群体构建。若池尚未就绪，extract_f2 不拆分时约需 %s 内存（超出限制时 admixtools 会拆分任务，耗时更长）；池在磁盘上约占 %s。", "allsnps=FALSE: सभी मॉडल एक ही f2 पूल उपयोग करते हैं; पूल %d आबादियों से बनता है। पूल तैयार न हो तो extract_f2 को बिना बाँटे लगभग %s मेमोरी चाहिए (admixtools सीमा से बड़े काम को बाँट देता है, समय बढ़ता है); पूल डिस्क पर लगभग %s लेता है।", "allsnps=FALSE: todos los modelos usan un único pool f2, creado con %d poblaciones. Si el pool no está listo, extract_f2 necesita unos %s de memoria sin dividir el trabajo (admixtools divide el trabajo que supera su límite, y tarda más); el pool ocupa unos %s en disco.", "allsnps=FALSE : tous les modèles utilisent un seul pool f2, construit avec %d populations. Si le pool n'est pas prêt, extract_f2 demande environ %s de mémoire sans découpage (admixtools découpe le travail qui dépasse sa limite, ce qui prend plus de temps) ; le pool occupe environ %s sur le disque.", "allsnps=FALSE: تستخدم جميع النماذج مجمع f2 واحدًا يُبنى من %d مجموعة. إن لم يكن المجمع جاهزًا يحتاج extract_f2 دون تقسيم نحو %s من الذاكرة (يقسّم admixtools العمل الذي يتجاوز حده فيطول الوقت)؛ ويشغل المجمع نحو %s على القرص.", "allsnps=FALSE: সব মডেল একটি f2 পুল ব্যবহার করে; পুল %d জনগোষ্ঠী দিয়ে তৈরি হয়। পুল প্রস্তুত না থাকলে extract_f2 কাজ না ভাগ করে প্রায় %s মেমরি চায় (admixtools সীমা ছাড়ানো কাজ ভাগ করে, সময় বাড়ে); পুল ডিস্কে প্রায় %s জায়গা নেয়।", "allsnps=FALSE: todos os modelos usam um único pool f2, criado com %d populações. Se o pool não estiver pronto, extract_f2 precisa de cerca de %s de memória sem dividir o trabalho (o admixtools divide o trabalho que excede o limite, levando mais tempo); o pool ocupa cerca de %s em disco.", "allsnps=FALSE: все модели используют один пул f2, построенный по %d популяциям. Если пул не готов, extract_f2 без разбиения требует около %s памяти (admixtools разбивает работу сверх лимита, это дольше); пул занимает на диске около %s.", "allsnps=FALSE: تمام ماڈل ایک f2 پول استعمال کرتے ہیں؛ پول %d آبادیوں سے بنتا ہے۔ پول تیار نہ ہو تو extract_f2 کام تقسیم کیے بغیر تقریباً %s میموری مانگتا ہے (admixtools حد سے بڑا کام حصوں میں بانٹتا ہے، وقت بڑھتا ہے)؛ پول ڈسک پر تقریباً %s لیتا ہے۔", "allsnps=FALSE: Alle Modelle nutzen einen f2-Pool, gebaut aus %d Populationen. Ist der Pool nicht fertig, braucht extract_f2 ohne Aufteilung etwa %s Speicher (admixtools teilt Arbeit über seinem Limit auf, das dauert länger); der Pool belegt etwa %s auf der Festplatte.", "allsnps=FALSE: すべてのモデルが 1 つの f2 プールを使い、プールは %d 集団で作られます。プールが未作成なら、extract_f2 は分割なしで約 %s のメモリを要します（上限を超える作業は admixtools が分割し、時間が延びます）。プールはディスク上で約 %s を占めます。", "allsnps=FALSE: 모든 모델이 하나의 f2 풀을 쓰며 풀은 %d개 집단으로 만들어집니다. 풀이 준비되지 않았다면 extract_f2는 작업을 나누지 않을 때 약 %s 메모리가 필요합니다(한도를 넘는 작업은 admixtools가 나누며 시간이 더 걸립니다). 풀은 디스크에서 약 %s를 차지합니다.", "allsnps=FALSE: semua model memakai satu pool f2 yang dibangun dari %d populasi. Jika pool belum siap, extract_f2 tanpa pembagian butuh sekitar %s memori (admixtools membagi pekerjaan yang melewati batasnya, sehingga lebih lama); pool memakai sekitar %s di disk.")
-add_tr("k9_load_true", "allsnps=TRUE: her model için genotip dosyası baştan okunur. Bu sette model başına kaba tahmin %s, toplam yaklaşık %s.", "allsnps=TRUE: the genotype file is read again for every model. For this set, a rough estimate is %s per model, about %s in total.", "allsnps=TRUE：每个模型都会重新读取基因型文件。此数据集每个模型粗略估计 %s，总计约 %s。", "allsnps=TRUE: हर मॉडल के लिए जीनोटाइप फ़ाइल फिर से पढ़ी जाती है। इस सेट में प्रति मॉडल मोटा अनुमान %s, कुल लगभग %s।", "allsnps=TRUE: el archivo de genotipos se lee de nuevo para cada modelo. Para este conjunto, estimación aproximada %s por modelo, unos %s en total.", "allsnps=TRUE : le fichier de génotypes est relu pour chaque modèle. Pour ce jeu, estimation grossière %s par modèle, environ %s au total.", "allsnps=TRUE: يُقرأ ملف الأنماط الجينية من جديد لكل نموذج. التقدير التقريبي لهذه المجموعة %s لكل نموذج، ونحو %s إجمالًا.", "allsnps=TRUE: প্রতিটি মডেলের জন্য জিনোটাইপ ফাইল নতুন করে পড়া হয়। এই সেটে প্রতি মডেলে মোটামুটি %s, মোট প্রায় %s।", "allsnps=TRUE: o arquivo de genótipos é lido de novo para cada modelo. Para este conjunto, estimativa aproximada de %s por modelo, cerca de %s no total.", "allsnps=TRUE: файл генотипов читается заново для каждой модели. Для этого набора грубая оценка %s на модель, всего около %s.", "allsnps=TRUE: ہر ماڈل کے لیے جینوٹائپ فائل دوبارہ پڑھی جاتی ہے۔ اس سیٹ میں فی ماڈل موٹا اندازہ %s، کل تقریباً %s۔", "allsnps=TRUE: Die Genotypdatei wird für jedes Modell neu gelesen. Grobe Schätzung für diesen Datensatz: %s pro Modell, insgesamt etwa %s.", "allsnps=TRUE: モデルごとにジェノタイプファイルを読み直します。このデータでの概算はモデルあたり %s、合計約 %s です。", "allsnps=TRUE: 모델마다 유전형 파일을 다시 읽습니다. 이 세트의 대략적 추정은 모델당 %s, 총 약 %s입니다.", "allsnps=TRUE: berkas genotipe dibaca ulang untuk setiap model. Perkiraan kasar untuk set ini %s per model, total sekitar %s.")
+add_tr("k9_load_true", "allsnps=TRUE: genotip dosyası bütün modeller için tek geçişte bir kez okunur. Bu sette kaba tahmin yaklaşık %s.", "allsnps=TRUE: the genotype file is read once, in a single pass, for all models. For this set, a rough estimate is about %s.", "allsnps=TRUE：所有模型只需一次读取基因型文件。此数据集粗略估计约 %s。", "allsnps=TRUE: सभी मॉडलों के लिए जीनोटाइप फ़ाइल एक ही बार में पढ़ी जाती है। इस सेट में मोटा अनुमान लगभग %s।", "allsnps=TRUE: el archivo de genotipos se lee una sola vez para todos los modelos. Para este conjunto, estimación aproximada de unos %s.", "allsnps=TRUE : le fichier de génotypes est lu une seule fois pour tous les modèles. Pour ce jeu, estimation grossière d'environ %s.", "allsnps=TRUE: يُقرأ ملف الأنماط الجينية مرة واحدة لجميع النماذج. التقدير التقريبي لهذه المجموعة نحو %s.", "allsnps=TRUE: সব মডেলের জন্য জিনোটাইপ ফাইল একবারেই পড়া হয়। এই সেটে মোটামুটি প্রায় %s।", "allsnps=TRUE: o arquivo de genótipos é lido uma única vez para todos os modelos. Para este conjunto, estimativa aproximada de cerca de %s.", "allsnps=TRUE: файл генотипов читается один раз для всех моделей. Для этого набора грубая оценка около %s.", "allsnps=TRUE: تمام ماڈلز کے لیے جینوٹائپ فائل ایک ہی بار پڑھی جاتی ہے۔ اس سیٹ میں موٹا اندازہ تقریباً %s۔", "allsnps=TRUE: Die Genotypdatei wird für alle Modelle nur einmal gelesen. Grobe Schätzung für diesen Datensatz: etwa %s.", "allsnps=TRUE: すべてのモデルについてジェノタイプファイルを1回だけ読み込みます。このデータでの概算は約 %s です。", "allsnps=TRUE: 모든 모델에 대해 유전형 파일을 한 번만 읽습니다. 이 세트의 대략적 추정은 약 %s입니다.", "allsnps=TRUE: berkas genotipe dibaca satu kali untuk semua model. Perkiraan kasar untuk set ini sekitar %s.")
 add_tr("k9_no_table", "Sıralı modelde Left'ler sabit olmadığından toplu koşu tablosu oluşmaz; ağırlıklar her model için ayrı gösterilir (toplu Excel'de her satır bir model).", "Sequential models have no fixed Left set, so no batch run table is built; weights are shown for each model separately (one row per model in the batch Excel).", "顺序模型的 Left 不固定，因此不生成批量运行表；每个模型的权重单独显示（批量 Excel 中每行一个模型）。", "क्रमिक मॉडल में Left स्थिर नहीं होते, इसलिए बैच रन तालिका नहीं बनती; हर मॉडल के वेट अलग दिखते हैं (बैच Excel में हर पंक्ति एक मॉडल)।", "En los modelos secuenciales los Left no son fijos, así que no se crea la tabla de ejecución por lotes; los pesos se muestran por modelo (una fila por modelo en el Excel por lotes).", "Les modèles séquentiels n'ont pas de Left fixes : aucun tableau d'exécution groupée n'est créé ; les poids sont affichés pour chaque modèle (une ligne par modèle dans l'Excel groupé).", "لا تكون مجموعات Left ثابتة في النماذج المتتابعة، لذا لا يُنشأ جدول التشغيل الجماعي؛ تُعرض الأوزان لكل نموذج على حدة (كل صف نموذج في Excel الجماعي).", "ক্রমিক মডেলে Left স্থির নয়, তাই ব্যাচ রান সারণি তৈরি হয় না; প্রতিটি মডেলের ওয়েট আলাদা দেখানো হয় (ব্যাচ Excel-এ প্রতি সারিতে একটি মডেল)।", "Nos modelos sequenciais os Left não são fixos, então a tabela da execução em lote não é criada; os pesos aparecem por modelo (uma linha por modelo no Excel em lote).", "У последовательных моделей нет фиксированного Left, поэтому таблица пакетного запуска не строится; веса показаны для каждой модели отдельно (в пакетном Excel одна строка — одна модель).", "ترتیب وار ماڈل میں Left ثابت نہیں، اس لیے بیچ رن جدول نہیں بنتا؛ ہر ماڈل کے وزن الگ دکھائے جاتے ہیں (بیچ Excel میں ہر سطر ایک ماڈل)۔", "Sequenzielle Modelle haben keine festen Left, daher entsteht keine Stapellauf-Tabelle; Gewichte werden je Modell angezeigt (im Stapel-Excel eine Zeile pro Modell).", "順次モデルでは Left が固定されないため一括実行表は作られません。重みはモデルごとに表示されます（一括 Excel では 1 行 1 モデル）。", "순차 모델은 Left가 고정되지 않으므로 일괄 실행 표가 만들어지지 않습니다. 가중치는 모델별로 표시됩니다(일괄 Excel에서는 한 행이 한 모델).", "Model berurutan tidak punya Left tetap, sehingga tabel proses kelompok tidak dibuat; bobot ditampilkan per model (satu baris per model di Excel kelompok).")
 add_tr("k9_split_off", "Sıralı model açıkken \"Etiketi bireylere ayır\" kullanılamaz; kapatıldı.", "\"Split label into individuals\" cannot be used while Sequential models is on; it was turned off.", "开启顺序模型时无法使用“将标签拆分为个体”；已关闭。", "क्रमिक मॉडल चालू रहते \"लेबल को व्यक्तियों में बाँटें\" उपयोग नहीं हो सकता; बंद किया गया।", "Con Modelos secuenciales activo no se puede usar \"Dividir la etiqueta en individuos\"; se ha desactivado.", "« Scinder l'étiquette en individus » est indisponible tant que Modèles séquentiels est activé ; il a été désactivé.", "لا يمكن استخدام \"تقسيم التسمية إلى أفراد\" مع تفعيل النماذج المتتابعة؛ تم إيقافه.", "ক্রমিক মডেল চালু থাকলে \"লেবেলকে ব্যক্তিতে ভাগ\" ব্যবহার করা যায় না; বন্ধ করা হয়েছে।", "Com Modelos sequenciais ativo não é possível usar \"Dividir o rótulo em indivíduos\"; foi desativado.", "При включённых последовательных моделях «Разделить метку на особей» недоступно; выключено.", "ترتیب وار ماڈل کھلا ہو تو \"لیبل کو افراد میں بانٹیں\" استعمال نہیں ہو سکتا؛ بند کر دیا گیا۔", "Solange Sequenzielle Modelle an ist, ist \"Label in Individuen aufteilen\" nicht nutzbar; es wurde ausgeschaltet.", "順次モデルがオンの間は「ラベルを個体に分割」は使えません。オフにしました。", "순차 모델이 켜져 있는 동안 \"라벨을 개체로 분할\"은 쓸 수 없어 껐습니다.", "\"Pisahkan label menjadi individu\" tidak dapat dipakai saat Model berurutan aktif; dimatikan.")
 add_tr("bt_clip", "Panoya kopyala", "Copy to clipboard", "复制到剪贴板", "क्लिपबोर्ड पर कॉपी करें", "Copiar al portapapeles", "Copier dans le presse-papiers", "نسخ إلى الحافظة", "ক্লিপবোর্ডে কপি", "Copiar para a área de transferência", "Копировать в буфер обмена", "کلپ بورڈ پر کاپی کریں", "In die Zwischenablage kopieren", "クリップボードにコピー", "클립보드에 복사", "Salin ke papan klip")
@@ -5029,7 +5176,7 @@ build_ui <- function(lang = "tr") {
   # NOT: page_navbar tam bir SAYFA uretir; uiOutput icine gomulemez.
   # Sayfa-ici esdegeri navset_bar kullaniliyor (ayni nav_panel API'si).
   navset_bar(
-    title = tags$span(tags$strong("qpAdm Studio v6.4"),
+    title = tags$span(tags$strong("qpAdm Studio v6.5"),
                       tags$small(" by mozy70", class = "ms-1", style = "opacity:.65;font-weight:400;")),
     id = "main_nav", fillable = FALSE,
     header = tagList(if (is_rtl(lang)) tags$style(HTML("body{direction:rtl;} .navbar{direction:rtl;}")) else NULL,
@@ -5208,7 +5355,9 @@ build_ui <- function(lang = "tr") {
             actionButton("sel_none", tr("clear_selection"), class = "btn-sm btn-outline-secondary"),
             actionButton("clear_runs", tr("clear_accumulated"), class = "btn-sm btn-outline-danger"),
             downloadButton("dl_xlsx", tr("export_selected"), class = "btn-success btn-sm"),
-            actionButton("save_png_sel", tr("save_png_sel"), class = "btn-success btn-sm", icon = icon("images"))),
+            actionButton("save_png_sel", tr("save_png_sel"), class = "btn-success btn-sm", icon = icon("images")),
+            actionButton("acc_same_sets", tr("acc_same_sets"), class = "btn-sm btn-outline-primary", icon = icon("equals")),   # v6.5 ADIM 3 (madde 6)
+            actionButton("acc_bt_show", tr("acc_bt_show"), class = "btn-sm btn-primary", icon = icon("table"))),
           hint(tr("acc_hint")), hint(tr("acc_graph_hint")), DTOutput("acc_table"))),
       # v6.1 ADIM 3 (istek 6): toplu kosu tablosu (gosterilen modelin toplu kosusu)
       card(full_screen = TRUE, card_header(tr("bt_title")),
@@ -5216,6 +5365,7 @@ build_ui <- function(lang = "tr") {
           div(class = "d-flex gap-2 align-items-center flex-wrap mb-2",
             dirbtn("bt_dir"),
             actionButton("bt_png", tr("bt_png"), class = "btn-success btn-sm", icon = icon("download")),
+            downloadButton("bt_xlsx", tr("bt_xlsx"), class = "btn-success btn-sm"),   # v6.5 ADIM 3 (madde 6)
             actionButton("bt_clip", tr("bt_clip"), class = "btn-outline-primary btn-sm", icon = icon("clipboard"), `data-mode` = clip_mode())),
           div(class = "small text-muted", textOutput("bt_dir_path")),
           uiOutput("bt_ui"))),
@@ -5673,7 +5823,7 @@ build_ui <- function(lang = "tr") {
             tags$li(tr("help_c1")), tags$li(tr("help_c2")), tags$li(tr("help_c3")),
             tags$li(tr("help_c4")), tags$li(tr("help_c5"))),
           tags$hr(), h6(tr("paste_formats")), tags$pre(PASTE_EX), tags$hr(), p(tr("sel_hint")),
-          tags$hr(), p(class = "text-muted small", "qpAdm Studio v6.4 • admixtools2 GUI • by mozy70")))
+          tags$hr(), p(class = "text-muted small", "qpAdm Studio v6.5 • admixtools2 GUI • by mozy70")))
     ),
 
     nav_spacer(),
@@ -7187,8 +7337,13 @@ server <- function(input, output, session) {
   raw_report <- function() {
     b <- shown_batch()
     if (is.null(b)) return(tr("msg_no_model_run"))
+    # v6.5 ADIM 3 (madde 5): kosu surerken (gosterilen model suren kosunun) uyarilar ve konsol o ana kadarki halleriyle
+    r <- shown_run(); live <- !is.null(r$batch) && identical(r$batch, k1$bid) && !isTRUE(k1$closed)
+    run <- if (live) list(done = sum(k1$seen), total = length(k1$jobs)) else NULL
+    rc <- if (live) rv$rcond %||% character(0) else b$rcond %||% character(0)
+    lg <- if (live) tryCatch(log_view(k1_read_log()), error = function(e) character(0)) else b$log %||% character(0)
     build_raw_report(b$batch, b$right %||% character(0), b$left %||% character(0), b$meta %||% list(),
-                     b$labelmap %||% rv$labelmap, b$rcond %||% character(0), b$log %||% character(0), b$vfam, b$ext, sets = b$sets)
+                     b$labelmap %||% rv$labelmap, rc, lg, b$vfam, b$ext, sets = b$sets, running = run)
   }
   output$dl_raw <- downloadHandler(
     filename = function() sprintf("qpadm_raw_%s.txt", format(Sys.time(), "%Y%m%d_%H%M%S")),
@@ -7673,7 +7828,7 @@ server <- function(input, output, session) {
     ld <- split_load(nt_all, length(unique(c(left, right))), rv$snp_total, gb)
     nt <- length(unique(sp$OriginalLabel)); n <- nrow(sp)
     body <- if (identical(mode, "allsnps_true"))
-      sprintf(tr("split_true"), if (is.na(ld$sec_t)) "?" else fmt_dur(ld$sec_t), if (is.na(ld$sec_t)) "?" else fmt_dur(ld$sec_t * nt_all))
+      sprintf(tr("split_true"), if (is.na(ld$sec_t)) "?" else fmt_dur(ld$sec_t))   # v6.5: tek gecis
     else sprintf(tr("split_false"), ld$P, fmt_bytes(ld$ram), fmt_bytes(ld$disk))
     rn <- sp$VirtualLabel[sp$Renamed]
     split_pend(list(mode = mode))
@@ -7762,7 +7917,7 @@ server <- function(input, output, session) {
     fs <- geno_fileset(rv$prefix); gb <- if (is.null(fs)) NA_real_ else file.size(unname(fs$files[1]))
     ld <- split_load(0, length(pops), rv$snp_total, gb)
     body <- if (identical(mode, "allsnps_true"))
-      sprintf(tr("k9_load_true"), if (is.na(ld$sec_t)) "?" else fmt_dur(ld$sec_t), if (is.na(ld$sec_t)) "?" else fmt_dur(ld$sec_t * nmod))
+      sprintf(tr("k9_load_true"), if (is.na(ld$sec_t)) "?" else fmt_dur(ld$sec_t))   # v6.5: tek gecis
     else sprintf(tr("k9_load_false"), ld$P, fmt_bytes(ld$ram), fmt_bytes(ld$disk))
     split_pend(list(mode = mode))
     showModal(modalDialog(title = tr("k9_load_title"), easyClose = FALSE,
@@ -7790,6 +7945,8 @@ server <- function(input, output, session) {
     if (identical(md, "TRUE")) {
       nn <- parse_f4_snp_table(log_job_segments(raw_lg)[[as.character(k)]] %||% character(0)); kk <- pend$tsnp_keys[[t]] %||% NA_character_
       tv <- if (!is.na(kk) && !is.null(k1$tcache[[kk]])) k1$tcache[[kk]]$n else if (is.null(k1$tsv)) NA_real_ else unname(k1$tsv[t])
+      if (!isTRUE(is.finite(tv)) && length(raw_lg)) { tl <- grep("^QPS_TSNP [0-9]+ ", raw_lg, value = TRUE)   # v6.5: tek geciste sayildi
+        if (length(tl)) { nm <- sub("^QPS_TSNP [0-9]+ ", "", tl); if (t %in% nm) tv <- as.numeric(sub("^QPS_TSNP ([0-9]+) .*$", "\\1", tl[match(t, nm)])) } }
       si <- list(basis = "f4", used = if (length(nn)) mean(nn) else NA_real_, used_min = if (length(nn)) min(nn) else NA_real_,
            used_max = if (length(nn)) max(nn) else NA_real_, n_f4 = length(nn), target = as.numeric(tv %||% NA_real_))
       # v6.3 (S6): hedef bu kosuda sayilacak ve sayim henuz bitmedi
@@ -7837,7 +7994,7 @@ server <- function(input, output, session) {
     b <- rv$batches[[bid]]; b$batch[[jb$key]] <- x; rv$batches[[bid]] <- b
     rv$k1_n <- list(done = sum(k1$seen), total = length(k1$jobs), running = !isTRUE(k1$closed))
     # yalniz ilk sonuc kendiliginden acilir; sonrakiler ekrani degistirmez
-    if (!is.na(k1$nm[k]) && !isTRUE(k1$opened)) { k1$opened <- TRUE; rv$graph_pick <- k1$nm[k]; nav_select("main_nav", "results") }
+    if (!is.na(k1$nm[k]) && !isTRUE(k1$opened)) { k1$opened <- TRUE; rv$bt_sel <- NULL; rv$graph_pick <- k1$nm[k]; nav_select("main_nav", "results") }   # v6.5: yeni kosu -> tablo kosunun
     invisible(NULL)
   }
   fin_close <- function(raw_lg, stopped = FALSE) {
@@ -7981,7 +8138,7 @@ server <- function(input, output, session) {
     # REAKTIF BAGLAMDA (burada) duz veriye cevrilip argüman olarak gonderilir.
     msgs <- list(f2_head = tr("err_extract_f2_head"), f2_maxmiss = tr("err_extract_f2_maxmiss"), f2_log = tr("err_extract_f2_log"), f2_precomp = tr("err_f2_precomp"))
     rv$proc <- qps_r_bg(
-      func = function(mode, prefix, f2dir, need, pops, jobs, right, maxmiss, blgsize, adjph, auto_only, msgs, tsnp_need, resdir, pool_pops = pops, xinfo = NULL, xfun = NULL, xcache = NULL) {
+      func = function(mode, prefix, f2dir, need, pops, jobs, right, maxmiss, blgsize, adjph, auto_only, msgs, tsnp_need, resdir, pool_pops = pops, xinfo = NULL, xfun = NULL, xcache = NULL, gp = NULL) {
         options(cli.width = 10000, width = 10000, cli.num_colors = 1, crayon.enabled = FALSE); Sys.setenv(COLUMNS = "10000", NO_COLOR = "1"); library(admixtools)
         cat(sprintf("QPS_MODE %s\n", if (identical(mode, "allsnps_true")) "TRUE" else "FALSE"))
         f2 <- NULL
@@ -8004,6 +8161,16 @@ server <- function(input, output, session) {
         # v6.4 test (adim 2): ek setli allsnps=TRUE -- frekans matrisi bir kez (panel SNP sirasi, ploidi duzeltmesiz)
         AFx <- NULL
         if (identical(mode, "allsnps_true") && !is.null(xinfo)) { cat("QPS_STAGE sanal frekans tablosu kuruluyor\n"); AFx <- xfun$aft(xinfo, pops, FALSE, xcache, counts = FALSE) }
+        # v6.5 ADIM 1: ek setsiz allsnps=TRUE -- butun islerin dortluleri tek genotip gecisinde; hedef SNP sayimi ayni geciste.
+        # Gecis hata verirse (ornegin veri setinde olmayan pop) GP NULL kalir ve is basina qpadm(prefix) yoluna dusulur.
+        GP <- NULL
+        if (identical(mode, "allsnps_true") && is.null(AFx) && is.list(gp)) {
+          pcs <- do.call(rbind, lapply(jobs, function(jb) gp$pcomb(jb$t, jb$left, right))); tps <- unique(vapply(jobs, function(jb) jb$t, character(1)))
+          cat(sprintf("QPS_PASS %d %d\n", N, nrow(unique(pcs)))); cat("QPS_STAGE tek gecis\n")
+          GP <- tryCatch(gp$pass(prefix, pcs, tps), error = function(e) { cat(sprintf("QPS_STAGE_ERR single pass: %s\n", gsub("[\r\n]+", " ", conditionMessage(e)))); NULL })
+          if (!is.null(GP)) { tv <- GP$tsnp[intersect(tsnp_need, names(GP$tsnp))]
+            if (length(tv)) { cat(sprintf("QPS_TSNP_PASS %d %s\n", length(tv), paste(names(tv), collapse = ", "))); for (nm in names(tv)) cat(sprintf("QPS_TSNP %s %s\n", format(tv[[nm]], scientific = FALSE), nm)) } }
+        }
         for (k in seq_len(N)) { jb <- jobs[[k]]; t <- jb$t; left <- jb$left; tag <- jb$tag
           cat(sprintf("QPS_TARGET %d %d %s\n", k, N, tag))
           cat("QPS_STAGE qpadm calisiyor\n")
@@ -8014,7 +8181,7 @@ server <- function(input, output, session) {
             # Onceden hesaplanmis f2 dizisi verildiginde qpadm() bu argumani kabul etmez
             # ("The following arguments are not used: 'allsnps'"). Onceden hesaplanmis f2
             # zaten allsnps=FALSE davranisidir; bu yuzden argumani GONDERMIYORUZ.
-            if (identical(mode, "allsnps_true")) { if (is.null(AFx)) qpadm(prefix, left = left, right = right, target = t, allsnps = TRUE, verbose = TRUE)
+            if (identical(mode, "allsnps_true")) { if (!is.null(GP)) gp$fit(GP$fd, t, left, right, TRUE) else if (is.null(AFx)) qpadm(prefix, left = left, right = right, target = t, allsnps = TRUE, verbose = TRUE)
                                                    else xfun$qtrue(AFx$afs, AFx$snpfile, t, left, right, 0.05, TRUE, xfun$f4, AFx$zero, xfun$zfix) }   # v6.4 test (M1)
             else qpadm(f2, left = left, right = right, target = t, verbose = TRUE)
           },
@@ -8035,7 +8202,8 @@ server <- function(input, output, session) {
         # okumasiyla; otozomlar (qpadm allsnps'in auto_only = TRUE varsayilani). Hata sonucu bozmaz.
         okj <- !vapply(out, inherits, logical(1), "error")
         okt <- intersect(tsnp_need, unique(vapply(jobs[okj], function(j) j$t, character(1))))
-        if (identical(mode, "allsnps_true") && length(okt)) {
+        if (!is.null(GP) && length(okt)) { attr(out, "qps_tsnp") <- stats::setNames(as.numeric(GP$tsnp[okt]), okt)   # v6.5: tek geciste sayildi (okuma yok)
+        } else if (identical(mode, "allsnps_true") && length(okt)) {
           cat(sprintf("QPS_TSNP_START %d %s\n", length(okt), paste(okt, collapse = ", "))); t0 <- Sys.time()
           v <- if (!is.null(AFx)) { ch <- suppressWarnings(as.numeric(gsub("[a-zA-Z]+", "", AFx$snpfile$CHR))); keep <- !is.na(ch) & ch <= 22   # v6.4 test: sanal matristen
             stats::setNames(vapply(okt, function(tt) as.numeric(sum(!is.na(AFx$afs[keep, tt]))), 0), okt) } else tryCatch({
@@ -8055,7 +8223,8 @@ server <- function(input, output, session) {
       # v6.0 (D11): stderr = "2>&1" -- ayni dosyaya iki tutamak stdout satirlarini eziyordu (K1 tablosu, QPS_*).
       args = list(mode = mode, prefix = pfx, f2dir = f2dir, need = need, pops = pops, jobs = jobs, right = right,
                   maxmiss = pa$maxmiss, blgsize = pa$blgsize, adjph = pa$adjph, auto_only = pa$auto_only, msgs = msgs, tsnp_need = tneed, resdir = resdir, pool_pops = ppops,
-                  xinfo = if (is.null(xc)) NULL else xc$bg, xfun = if (is.null(xc)) NULL else xs_bg_funs(), xcache = XS_CACHE_DIR),
+                  xinfo = if (is.null(xc)) NULL else xc$bg, xfun = if (is.null(xc)) NULL else xs_bg_funs(), xcache = XS_CACHE_DIR,
+                  gp = if (identical(mode, "allsnps_true") && is.null(xc)) qps_gp_funs() else NULL),   # v6.5 ADIM 1
       stdout = logf, stderr = "2>&1")
     # Havuz yan dosyasi: v5.5 ust-kume aramasi bu dosyaya bakacak.
     if (need) rv$pool_pending <- list(dir = f2dir, prefix = pfx, pops = ppops, maxmiss = pa$maxmiss, vfam = vkey,
@@ -8658,6 +8827,7 @@ server <- function(input, output, session) {
         if (is.null(rv$blk_t0) || pr$blk < (rv$blk_last %||% 0)) { rv$blk_t0 <- Sys.time(); rv$blk_k0 <- pr$blk }
         rv$blk_last <- pr$blk; dk <- pr$blk - (rv$blk_k0 %||% pr$blk)
         rv$eta <- if (dk >= 5 && pr$tot > pr$blk) fmt_dur(as.numeric(difftime(Sys.time(), rv$blk_t0, units = "secs")) / dk * (pr$tot - pr$blk)) else NULL
+        rv$eta_key <- if (isTRUE(pr$phase)) "prog_eta_phase" else "prog_eta"   # v6.5: tek gecis -> "bu asama icin kalan"
       } else rv$eta <- NULL
       rcx <- unique(c(txt[grepl("^QPS_RCOND ", txt)], pr$rcond))
       if (length(rcx)) rv$rcond <- unique(c(rv$rcond, rcx))
@@ -8691,7 +8861,7 @@ server <- function(input, output, session) {
   output$progress_ui <- renderUI({
     running <- !is.null(rv$proc); done <- isTRUE(rv$done); if (!running && !done) return(NULL)
     if (running) invalidateLater(1000)   # v6.0 (K9): gecen sure saniyede bir
-    prog_ui(done, rv$progress, rv$progmsg, el = el_str(rv$t_start, if (running) NULL else rv$t_end), eta = if (running) rv$eta else NULL)
+    prog_ui(done, rv$progress, rv$progmsg, el = el_str(rv$t_start, if (running) NULL else rv$t_end), eta = if (running) rv$eta else NULL, eta_key = rv$eta_key %||% "prog_eta")
   })
 
   # ---- Ozet kutulari (yari yukseklik, feasible renkli) ----
@@ -8717,8 +8887,15 @@ server <- function(input, output, session) {
       return(div(class = "small fw-bold text-primary mb-1", sprintf(tr("k1_bt_live"), n$done, n$total)))
     if (!is.null(b$meta$stopped)) return(div(class = "small text-warning mb-1", sprintf(tr("k1_bt_stopped"), b$meta$stopped)))
     NULL }
+  # v6.5 ADIM 3 (madde 6): tablo kaynagi -- Biriken modellerden secim (rv$bt_sel; en az iki kayit duruyorsa) ya da
+  # gosterilen modelin toplu kosusu. PNG, pano ve tablonun Excel'i de bunu alir.
+  bt_batch <- reactive({ s <- rv$bt_sel
+    if (length(s)) { ks <- intersect(s, names(rv$runs)); if (length(ks) >= 2) return(bt_sel_batch(rv$runs[ks], rv$batches)) }
+    shown_batch() })
+  bts_note <- function(b) div(class = "small fw-bold text-primary mb-1 d-flex gap-2 align-items-center flex-wrap",
+    span(sprintf(tr("bts_note"), b$meta$n)), actionLink("bt_back", tr("bt_back"), icon = icon("arrow-left")))
   output$bt_ui <- renderUI({
-    lang_rv(); b <- shown_batch(); f <- if (is.null(b)) NULL else bt_frame(b)
+    lang_rv(); b <- bt_batch(); f <- if (is.null(b)) NULL else bt_frame(b)
     if (identical(b$kind, "seq")) return(hint(tr("k9_no_table")))   # v6.2 (K9)
     if (is.null(f)) return(hint(tr("bt_none")))
     st <- isolate(rv$bt_sort) %||% list(col = "", dir = "desc"); ord <- bt_order(f, st$col, st$dir); nl <- length(f$left)
@@ -8734,7 +8911,7 @@ server <- function(input, output, session) {
       tags$td(`data-v` = if (is.na(f$p[i])) "" else format(f$p[i], digits = 15), fmt(f$p[i])),
       tags$td(`data-v` = if (is.na(f$chisq[i])) "" else format(f$chisq[i], digits = 15), fmt(f$chisq[i])),
       tags$td(`data-v` = if (is.na(f$feasible[i])) "" else as.numeric(f$feasible[i]), if (is.na(f$feasible[i])) "NA" else as.character(f$feasible[i]))))
-    tagList(hint(tr("bt_hint")), k1_note(b), div(class = "qps-bt-wrap", tags$table(class = "qps-bt", id = "qps_bt", tags$thead(head), tags$tbody(rows))),
+    tagList(hint(tr("bt_hint")), if (identical(b$kind, "sel")) bts_note(b) else k1_note(b), div(class = "qps-bt-wrap", tags$table(class = "qps-bt", id = "qps_bt", tags$thead(head), tags$tbody(rows))),
       tags$script(HTML("setTimeout(window.qpsBtFit, 30);")))
   })
   # kayit klasoru: kartin kendi dugmesi; secilmediyse grafik kartinin klasoru
@@ -8742,20 +8919,26 @@ server <- function(input, output, session) {
   bt_dir_sel <- function() { d <- tryCatch(shinyFiles::parseDirPath(volumes, input$bt_dir), error = function(e) character(0)); if (length(d)) d else png_dir_sel() }
   output$bt_dir_path <- renderText({ lang_rv(); d <- bt_dir_sel(); if (length(d)) paste0(tr("save_folder"), ": ", d) else tr("folder_not_selected") })
   observeEvent(input$bt_png, {
-    b <- shown_batch(); f <- if (is.null(b)) NULL else bt_frame(b)
+    b <- bt_batch(); f <- if (is.null(b)) NULL else bt_frame(b)
     if (is.null(f)) { showNotification(tr("bt_none"), type = "error"); return() }
     d <- bt_dir_sel(); if (!length(d)) { showNotification(tr("msg_pick_folder"), type = "error"); return() }
     st <- rv$bt_sort %||% list(col = "", dir = "desc"); ord <- bt_order(f, st$col, st$dir); wh <- bt_png_size(f)
-    bid <- shown_run()$batch %||% "b000"; stamp <- gsub("[^0-9]", "", b$meta$time %||% format(Sys.time(), "%Y%m%d%H%M%S"))
+    bid <- if (identical(b$kind, "sel")) "sel" else shown_run()$batch %||% "b000"; stamp <- gsub("[^0-9]", "", b$meta$time %||% format(Sys.time(), "%Y%m%d%H%M%S"))
     fn <- file.path(d, sprintf("qpadm_batch_%s_%s.png", bid, stamp))
     tryCatch({ save_png(bt_plot(f, ord), fn, wh[1], wh[2]); showNotification(sprintf(tr("msg_saved_to"), fn), type = "message", duration = 8) },
       error = function(e) showNotification(paste0(tr("msg_png_error"), ": ", conditionMessage(e)), type = "error", duration = NULL))
   })
+  # v6.5 ADIM 3 (madde 6): tablodaki modellerin toplu Excel'i (bugunku bicim: Summary / Weights / Popdrop / rcond)
+  output$bt_xlsx <- downloadHandler(
+    filename = function() sprintf("qpadm_batch_table_%s.xlsx", format(Sys.time(), "%Y%m%d_%H%M%S")),
+    content = function(file) { b <- bt_batch(); if (is.null(b)) { showNotification(tr("bt_none"), type = "error"); return() }
+      write_batch_excel(b$batch, b$right, b$left, b$labelmap %||% rv$labelmap, file, rcond_lines = b$rcond %||% character(0), kind = if (identical(b$kind, "seq")) "seq" else "batch") })
+  observeEvent(input$bt_back, { rv$bt_sel <- NULL })
   # ---- v6.2 (K5): toplu kosu tablosu panoya (PNG ile ayni gorsel) ----
   clip <- new.env(parent = emptyenv()); clip$cur <- NULL; clip_tick <- reactiveVal(0)
   session$onSessionEnded(function() { d <- clip$cur; if (!is.null(d)) try(d$proc$kill(), silent = TRUE) })
   bt_png_file <- function() {
-    b <- shown_batch(); f <- if (is.null(b)) NULL else bt_frame(b); if (is.null(f)) stop(tr(if (identical(b$kind, "seq")) "k9_no_table" else "bt_none"), call. = FALSE)
+    b <- bt_batch(); f <- if (is.null(b)) NULL else bt_frame(b); if (is.null(f)) stop(tr(if (identical(b$kind, "seq")) "k9_no_table" else "bt_none"), call. = FALSE)
     st <- rv$bt_sort %||% list(col = "", dir = "desc"); ord <- bt_order(f, st$col, st$dir); wh <- bt_png_size(f)
     fn <- tempfile("qps_bt_", fileext = ".png"); save_png(bt_plot(f, ord), fn, wh[1], wh[2]); fn
   }
@@ -8973,7 +9156,17 @@ server <- function(input, output, session) {
   acc_proxy <- DT::dataTableProxy("acc_table")
   observeEvent(input$sel_all,  DT::selectRows(acc_proxy, seq_len(nrow(acc_df()))))
   observeEvent(input$sel_none, DT::selectRows(acc_proxy, NULL))
-  observeEvent(input$clear_runs, { rv$runs <- list(); rv$batches <- list(); rv$graph_pick <- NULL; rv$graph_key <- NULL; rv$graph_plot <- NULL
+  # v6.5 ADIM 3 (madde 6): secimi toplu tabloda goster / referansla ayni setli modelleri sec
+  observeEvent(input$acc_bt_show, { sel <- input$acc_table_rows_selected; keys <- names(rv$runs)[sel]; keys <- keys[!is.na(keys)]
+    if (!length(keys)) { showNotification(tr("msg_pick_model_first"), type = "error"); return() }
+    ck <- bt_sel_check(rv$runs[keys], rv$batches)
+    if (!isTRUE(ck$ok)) { showNotification(ck$why, type = "error", duration = 12); return() }
+    rv$bt_sel <- keys; showNotification(sprintf(tr("bts_note"), length(keys)), type = "message", duration = 5) })
+  observeEvent(input$acc_same_sets, { sel <- input$acc_table_rows_selected; ref <- names(rv$runs)[sel[1]]
+    if (!length(sel) || is.na(ref)) { showNotification(tr("bts_pick_ref"), type = "error"); return() }
+    idx <- which(vapply(names(rv$runs), function(k) identical(k, ref) || isTRUE(bt_sel_check(rv$runs[c(ref, k)], rv$batches)$ok), logical(1)))
+    DT::selectRows(acc_proxy, unname(idx)); showNotification(sprintf(tr("bts_same_n"), length(idx)), type = "message", duration = 6) })
+  observeEvent(input$clear_runs, { rv$runs <- list(); rv$batches <- list(); rv$graph_pick <- NULL; rv$graph_key <- NULL; rv$graph_plot <- NULL; rv$bt_sel <- NULL
     showNotification(tr("msg_cleared"), type = "message") })
   output$dl_xlsx <- downloadHandler(
     filename = function() sprintf("qpadm_studio_%s.xlsx", format(Sys.time(), "%Y%m%d_%H%M%S")),
@@ -9116,7 +9309,7 @@ server <- function(input, output, session) {
     if (!is.null(xc)) console_add(xs_console(xc))   # v6.4 test
     msgs <- list(f2_head = tr("err_extract_f2_head"), f2_maxmiss = tr("err_extract_f2_maxmiss"), f2_log = tr("err_extract_f2_log"), f2_precomp = tr("err_f2_precomp"))
     rv$rot_proc <- qps_r_bg(
-      func = function(prefix, target, leftright, rightfix, minsize, maxsize, allsnps, maxmiss, need_f2, f2dir, pops, blgsize, adjph, auto_only, msgs, resdir, xinfo = NULL, xfun = NULL, xcache = NULL) {
+      func = function(prefix, target, leftright, rightfix, minsize, maxsize, allsnps, maxmiss, need_f2, f2dir, pops, blgsize, adjph, auto_only, msgs, resdir, xinfo = NULL, xfun = NULL, xcache = NULL, gp = NULL) {
         options(cli.width = 10000, width = 10000, cli.num_colors = 1, crayon.enabled = FALSE); Sys.setenv(COLUMNS = "10000", NO_COLOR = "1"); library(admixtools)
         models <- rotate_models(leftright, target, rightfix)
         nleft <- lengths(models$left); models <- models[nleft >= minsize & nleft <= maxsize, , drop = FALSE]
@@ -9135,6 +9328,14 @@ server <- function(input, output, session) {
         }
         AFx <- NULL   # v6.4 test (adim 2): ek setli allsnps=TRUE rotasyon -- frekans matrisi bir kez
         if (allsnps && !is.null(xinfo)) AFx <- xfun$aft(xinfo, pops, FALSE, xcache, counts = FALSE)
+        # v6.5 ADIM 2: ek setsiz allsnps=TRUE rotasyon -- butun modellerin dortluleri tek genotip gecisinde (Right modele gore
+        # degisir; birlesim). Gecis hata verirse GP NULL kalir ve model basina qpadm(prefix) yoluna dusulur.
+        GP <- NULL
+        if (allsnps && is.null(AFx) && is.list(gp) && N > 0) {
+          pcs <- do.call(rbind, lapply(seq_len(N), function(i) gp$pcomb(target, models$left[[i]], models$right[[i]])))
+          cat(sprintf("QPS_PASS %d %d\n", N, nrow(unique(pcs)))); cat("QPS_STAGE tek gecis\n")
+          GP <- tryCatch(gp$pass(prefix, pcs, character(0)), error = function(e) { cat(sprintf("QPS_STAGE_ERR single pass: %s\n", gsub("[\r\n]+", " ", conditionMessage(e)))); NULL })
+        }
         get_np <- function(res) {
           pd <- res$popdrop; if (is.null(pd) || !nrow(pd)) return(list(full = NA, nested = numeric(0)))
           w <- nchar(as.character(pd$pat[1])); full_pat <- paste(rep("0", w), collapse = "")
@@ -9161,7 +9362,7 @@ server <- function(input, output, session) {
         for (i in seq_len(N)) {
           L <- models$left[[i]]; R <- models$right[[i]]
           cat(sprintf("QPS_ROT %d %d %s\n", i, N, paste(L, collapse = " + ")))   # v6.0 (K11)
-          res <- tryCatch({ if (allsnps) { if (is.null(AFx)) qpadm(prefix, left = L, right = R, target = target, allsnps = TRUE, verbose = FALSE)
+          res <- tryCatch({ if (allsnps) { if (!is.null(GP)) gp$fit(GP$fd, target, L, R, FALSE) else if (is.null(AFx)) qpadm(prefix, left = L, right = R, target = target, allsnps = TRUE, verbose = FALSE)
                                            else xfun$qtrue(AFx$afs, AFx$snpfile, target, L, R, 0.05, FALSE, xfun$f4, AFx$zero, xfun$zfix) }
                             else qpadm(f2, left = L, right = R, target = target, verbose = FALSE) },
                           error = function(e) { cat(sprintf("QPS_ROT_ERR %d %s\n", i, gsub("[\r\n]+", " ", conditionMessage(e)))); NULL })   # v6.0 (K7)
@@ -9176,7 +9377,8 @@ server <- function(input, output, session) {
       args = list(prefix = pfx, target = tg, leftright = lr, rightfix = rf, minsize = mn, maxsize = mx,
                   allsnps = allsnps, maxmiss = pa$maxmiss, need_f2 = need, f2dir = f2dir, pops = pops,
                   blgsize = pa$blgsize, adjph = pa$adjph, auto_only = pa$auto_only, msgs = msgs, resdir = rdir,
-                  xinfo = if (is.null(xc)) NULL else xc$bg, xfun = if (is.null(xc)) NULL else xs_bg_funs(), xcache = XS_CACHE_DIR),
+                  xinfo = if (is.null(xc)) NULL else xc$bg, xfun = if (is.null(xc)) NULL else xs_bg_funs(), xcache = XS_CACHE_DIR,
+                  gp = if (allsnps && is.null(xc)) qps_gp_funs() else NULL),   # v6.5 ADIM 2
       stdout = logf, stderr = "2>&1")
     if (need) rv$pool_pending <- list(dir = f2dir, prefix = pfx, pops = pops, maxmiss = pa$maxmiss, vfam = rvk,
                                       blgsize = pa$blgsize, adjph = pa$adjph, auto_only = pa$auto_only, orig = fr$orig, comp = fr$comp)

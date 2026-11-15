@@ -8,13 +8,19 @@ admixtools2 ile qpAdm, rotasyon, f-istatistikleri (f2/f3/f4), qpGraph ve FST ana
 2. Zip'i bir klasöre çıkarın (sağ tık → Tümünü ayıkla).
 3. `qpAdm Studio BASLAT.bat` dosyasına çift tıklayın. R, paketler ve admixtools eksikse sırayla kurulur, ardından program tarayıcıda açılır.
 
-RStudio ile elle kurulum ve kullanım ayrıntıları: `qpAdm Studio v6.4 Installation.txt` (Türkçe: bölüm A).
+RStudio ile elle kurulum ve kullanım ayrıntıları: `qpAdm Studio v6.5 Installation.txt` (Türkçe: bölüm A).
+
+## v6.5'te yeni
+
+- allsnps=TRUE ile toplu hedef, sıralı model, ön tanımlı model ve rotasyon koşularında genotip dosyası bir kez okunur; sonuçlar önceki yolla birebir aynı, süre belirgin kısa. Hedef SNP sayısı aynı geçişte sayılır.
+- RAW çıktısında her hedefin rcond / matris uyarıları; koşu sürerken indirilen RAW "RUN IN PROGRESS" notu taşır.
+- Biriken modeller'de "Aynı setleri seç" ve "Toplu tabloda göster": Right ve Left setleri (etiket ve sample ID) aynı modeller Toplu koşu tablosunda birlikte; tablonun Excel'i.
 
 ## Dosyalar
 
-- `qpAdm Studio v6.4.R`: program (tek dosya)
-- `qpAdm Studio v6.4 Installation.R`: arayüz paketlerini kuran betik
-- `qpAdm Studio v6.4 Installation.txt`: kurulum ve kullanım kılavuzu (TR/EN)
+- `qpAdm Studio v6.5.R`: program (tek dosya)
+- `qpAdm Studio v6.5 Installation.R`: arayüz paketlerini kuran betik
+- `qpAdm Studio v6.5 Installation.txt`: kurulum ve kullanım kılavuzu (TR/EN)
 - `qpAdm Studio BASLAT.bat`: Windows için kolay kurulum ve başlatma
 
 ---
@@ -29,7 +35,13 @@ R/Shiny GUI for qpAdm, rotation, f-statistics (f2/f3/f4), qpGraph and FST analys
 2. Extract the zip to a folder (right-click → Extract All).
 3. Double-click `qpAdm Studio BASLAT.bat`. It installs R, the packages and admixtools if they are missing, then opens the program in the browser.
 
-Manual installation with RStudio and usage: `qpAdm Studio v6.4 Installation.txt` (English: section B).
+Manual installation with RStudio and usage: `qpAdm Studio v6.5 Installation.txt` (English: section B).
+
+## New in v6.5
+
+- With allsnps=TRUE, batch targets, sequential models, predefined models and rotation read the genotype file once; results are identical to the previous path and runs are much shorter. Target SNPs are counted in the same pass.
+- RAW output lists each target's rcond / matrix warnings; a RAW downloaded while a run is in progress carries a "RUN IN PROGRESS" note.
+- "Select same sets" and "Show in batch table" in Accumulated models: models with the same Right and Left sets (labels and sample IDs) shown together in the Batch run table; Excel export of the table.
 
 ---
 

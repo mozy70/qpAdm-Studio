@@ -1,4 +1,4 @@
-# qpAdm Studio v6.4 -- arayuz paketleri kurulumu / interface package installer (RUN ONCE)
+# qpAdm Studio v6.5 -- arayuz paketleri kurulumu / interface package installer (RUN ONCE)
 # TR: Bu dosyayi RStudio'da acip 'Source' de.  |  EN: Open in RStudio and click 'Source'.
 # RStudio'da: bu dosyayi ac, sag ustteki "Source" dugmesine bas
 # (ya da asagidaki satirlari Console'a yapistir).
@@ -28,6 +28,7 @@ if (!requireNamespace("rlang", quietly = TRUE) || utils::packageVersion("rlang")
 # v6.3 test2: yeni paket YOK.
 # v6.3: yeni paket YOK.
 # v6.4 test, v6.4: yeni paket YOK.
+# v6.5: yeni paket YOK.
 pkgs <- c("shiny","bslib","DT","shinyFiles","openxlsx","digest",
           "callr","ggplot2","ggpubr","patchwork","scales","ragg","cowplot","jsonlite",
           "plotly","htmlwidgets")
@@ -48,7 +49,7 @@ if (!requireNamespace("admixtools", quietly = TRUE)) {
   message("\nadmixtools: TAMAM.")
   message("Simdi programi calistirabilirsin:")
   message('  Session > Set Working Directory > Choose Directory  (program klasoru)')
-  message('  app <- source("qpAdm Studio v6.4.R", encoding = "UTF-8")$value')
+  message('  app <- source("qpAdm Studio v6.5.R", encoding = "UTF-8")$value')
   message('  shiny::runApp(app)   # tarayicida; port 7654, doluysa 7655-7699')
   message('  ASLA: runApp("dosya_yolu.R")')
 }

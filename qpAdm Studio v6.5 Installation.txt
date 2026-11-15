@@ -1,5 +1,5 @@
 ================================================================================
-  qpAdm Studio v6.4 by mozy70
+  qpAdm Studio v6.5 by mozy70
   KURULUM VE KULLANIM KILAVUZU  /  INSTALLATION AND USER GUIDE
   (Türkçe: bölüm A  |  English: section B)
 ================================================================================
@@ -10,9 +10,9 @@
 ################################################################################
 
 Klasordeki 3 dosya:
-  - qpAdm Studio v6.4.R         -> programin kendisi (tek dosya)
-  - qpAdm Studio v6.4 Installation.R -> arayuz paketlerini kuran betik
-  - qpAdm Studio v6.4 Installation.txt -> bu kilavuz
+  - qpAdm Studio v6.5.R         -> programin kendisi (tek dosya)
+  - qpAdm Studio v6.5 Installation.R -> arayuz paketlerini kuran betik
+  - qpAdm Studio v6.5 Installation.txt -> bu kilavuz
 
 --------------------------------------------------------------------------------
   KOLAY KURULUM VE BASLATMA: "qpAdm Studio BASLAT.bat" (v6.4 test'ten itibaren)
@@ -20,7 +20,7 @@ Klasordeki 3 dosya:
   "qpAdm Studio BASLAT.bat" paylasim zip'inin icindedir; ayrica bir sey
   indirmeniz gerekmez.
   1) Zip'i bir klasore cikarin (sag tik > Tumunu ayikla). "qpAdm Studio
-     BASLAT.bat", "qpAdm Studio v6.4.R" dosyasinin yaninda durmali (zip'ten
+     BASLAT.bat", "qpAdm Studio v6.5.R" dosyasinin yaninda durmali (zip'ten
      cikinca oyledir).
   2) "qpAdm Studio BASLAT.bat" dosyasina cift tiklayin. Windows bir guvenlik
      uyarisi gosterirse "Calistir" (ya da "Ek bilgi" > "Yine de calistir").
@@ -82,7 +82,7 @@ ADIM 5 -- Program klasoru
   Temiz bir klasor ac (orn. C:\qpadm\) ve 3 dosyayi oraya kopyala.
 
 ADIM 6 -- Arayuz paketleri
-  RStudio'da "qpAdm Studio v6.4 Installation.R" dosyasini ac ve "Source" tusuna bas.
+  RStudio'da "qpAdm Studio v6.5 Installation.R" dosyasini ac ve "Source" tusuna bas.
   Kurulanlar: shiny, bslib, DT, shinyFiles, openxlsx, digest, callr, ggplot2,
   ggpubr, patchwork, scales, ragg, cowplot
   (rlang guncellemesi istenirse bunu RStudio'da DEGIL, duz Rgui'de yap.)
@@ -90,7 +90,7 @@ ADIM 6 -- Arayuz paketleri
 ADIM 7 -- Calistirma
   Session > Set Working Directory > Choose Directory... (program klasorunu sec)
   Console'a:
-      app <- source("qpAdm Studio v6.4.R", encoding = "UTF-8")$value
+      app <- source("qpAdm Studio v6.5.R", encoding = "UTF-8")$value
       shiny::runApp(app)
   Program varsayilan olarak tarayicida acilir: port 7654; o port baska bir
   programca kullaniliyorsa 7655-7699 arasindaki ilk bos port (v6.4). Programi
@@ -126,9 +126,9 @@ SIK KARSILASILAN SORUNLAR
       dosya penceresini acar. Bir pencere zaten aciksa ikincisi acilmaz
       ("zaten acik" uyarisi); acik pencereyi kapatin.
   * ONEMLI -- ZIP ICINDEN CALISTIRMA: Dosyayi ZIP'ten CIKARMADAN calistirma.
-      Yanlis:  C:/qpadm/qpAdm Studio v6.4.zip/qpAdm Studio v6.4.R
+      Yanlis:  C:/qpadm/qpAdm Studio v6.5.zip/qpAdm Studio v6.5.R
       Dogru :  ZIP'i sag tik > "Tumunu ayikla" ile C:/qpadm/ icine cikar, sonra
-               C:/qpadm/qpAdm Studio v6.4.R dosyasini calistir.
+               C:/qpadm/qpAdm Studio v6.5.R dosyasini calistir.
       ZIP icinden calistirinca R dosyayi dogru kodlamayla okuyamaz ve
       "invalid UTF-8" uyarilari ile Turkce karakterler bozulur.
   * ONEMLI -- RSTUDIO KODLAMASI (UTF-8) VE DOSYANIN BOZULMASI
@@ -151,6 +151,33 @@ SIK KARSILASILAN SORUNLAR
       calismasini etkilemez. Asil risk bozuk gorunumun KAYDEDILMESIDIR; dosya
       kisalir ve program acilmaz. Boyle olursa dosyayi ZIP'ten yeniden cikar.
 
+
+--------------------------------------------------------------------------------
+  v6.5 NOTLARI
+--------------------------------------------------------------------------------
+  - Yeni paket YOK.
+  - HIZ (allsnps=TRUE): toplu hedeflerde, sirali modellerde, on tanimli
+    modellerde ve rotasyonda genotip dosyasi artik bir kez okunur; butun
+    modellerin f4 istatistikleri bu tek geciste hesaplanir, ardindan modeller
+    tek tek uyumlanir. Sonuclar onceki yolla birebir aynidir (agirliklar,
+    nested modeller, SNP tablosu). Hedef SNP sayisi da ayni geciste sayilir;
+    sonuc geldikten sonra ikinci bir okuma yoktur. Ek setli modeller ve
+    allsnps=FALSE degismedi. Gecis bir hata verirse program eski yoldan
+    (model basina okuma) devam eder.
+  - ILERLEME: tek geciste "Tek genotip gecisi -- blok i / N" ve bu asama icin
+    kalan sure; ardindan "qpAdm uyumu".
+  - RAW: her hedefin altinda o hedefin rcond / matris uyarilari. Kosu surerken
+    indirilen RAW basta "RUN IN PROGRESS" yazar; 4. ve 6. bolumde o ana
+    kadarki uyarilar ve konsol ciktisi notlu olarak yer alir.
+  - TOPLU TABLODA SECIM: Biriken modeller'de "Ayni setleri sec" (secili modelle
+    Right ve Left etiketleri ve her etiketin bireyleri ayni olan modelleri
+    secer) ve "Toplu tabloda goster" (secilenleri Toplu kosu tablosunda
+    birlikte gosterir). Ayni bireyler farkli etiket adiyla birlesmez; allsnps
+    modu (FALSE'ta maxmiss de) ayni olmali. Uymazsa tek satirlik gerekce
+    yazar (or. "05 / 03 -- Carian: 12 birey / 10 birey"). Ayni hedef birden
+    cok kez geciyorsa satir adina kosu numarasi eklenir ("05 · hedef").
+    "Kosu tablosuna don" eski gorunume doner. Tablo kartindaki "Tabloyu
+    Excel'e aktar" tablodaki modelleri toplu Excel bicimiyle yazar.
 
 --------------------------------------------------------------------------------
   v6.4 NOTLARI
@@ -680,9 +707,9 @@ SIK KARSILASILAN SORUNLAR
 ################################################################################
 
 Three files in the folder:
-  - qpAdm Studio v6.4.R         -> the program itself (single file)
-  - qpAdm Studio v6.4 Installation.R -> script that installs the interface packages
-  - qpAdm Studio v6.4 Installation.txt -> this guide
+  - qpAdm Studio v6.5.R         -> the program itself (single file)
+  - qpAdm Studio v6.5 Installation.R -> script that installs the interface packages
+  - qpAdm Studio v6.5 Installation.txt -> this guide
 
 --------------------------------------------------------------------------------
   EASY INSTALL AND START: "qpAdm Studio BASLAT.bat" (from v6.4 test on)
@@ -690,7 +717,7 @@ Three files in the folder:
   "qpAdm Studio BASLAT.bat" is inside the share zip; nothing else needs to
   be downloaded.
   1) Extract the zip into a folder (right-click > Extract All).
-     "qpAdm Studio BASLAT.bat" must sit next to "qpAdm Studio v6.4.R" (it does
+     "qpAdm Studio BASLAT.bat" must sit next to "qpAdm Studio v6.5.R" (it does
      after extraction).
   2) Double-click "qpAdm Studio BASLAT.bat". If Windows shows a security
      warning, choose "Run" (or "More info" > "Run anyway").
@@ -756,7 +783,7 @@ STEP 5 -- Program folder
   Create a clean folder (e.g. C:\qpadm\) and copy all three files into it.
 
 STEP 6 -- Interface packages
-  Open "qpAdm Studio v6.4 Installation.R" in RStudio and press "Source".
+  Open "qpAdm Studio v6.5 Installation.R" in RStudio and press "Source".
   It installs: shiny, bslib, DT, shinyFiles, openxlsx, digest, callr, ggplot2,
   ggpubr, patchwork, scales, ragg, cowplot
   (If it asks you to update rlang, do that in plain Rgui, NOT in RStudio.)
@@ -764,7 +791,7 @@ STEP 6 -- Interface packages
 STEP 7 -- Running the app
   Session > Set Working Directory > Choose Directory... (pick the program folder)
   Then in the Console:
-      app <- source("qpAdm Studio v6.4.R", encoding = "UTF-8")$value
+      app <- source("qpAdm Studio v6.5.R", encoding = "UTF-8")$value
       shiny::runApp(app)
   The program opens in the browser by default: port 7654; if another program
   uses that port, the first free port between 7655 and 7699 (v6.4). To stop
@@ -800,9 +827,9 @@ COMMON PROBLEMS
       own file dialog. If a dialog is already open a second one is not opened
       ("already open" warning); close the open dialog.
   * IMPORTANT -- DO NOT RUN FROM INSIDE THE ZIP. Extract it first.
-      Wrong:  C:/qpadm/qpAdm Studio v6.4.zip/qpAdm Studio v6.4.R
+      Wrong:  C:/qpadm/qpAdm Studio v6.5.zip/qpAdm Studio v6.5.R
       Right:  right-click the ZIP > "Extract All" into C:/qpadm/, then run
-              C:/qpadm/qpAdm Studio v6.4.R
+              C:/qpadm/qpAdm Studio v6.5.R
       Running from inside the ZIP prevents R from reading the file with the
       correct encoding ("invalid UTF-8" warnings, broken characters).
   * IMPORTANT -- RSTUDIO ENCODING (UTF-8) AND FILE CORRUPTION
@@ -825,6 +852,36 @@ COMMON PROBLEMS
       affect the program. The real risk is SAVING the garbled view; the file
       gets truncated and the program no longer starts. If that happens,
       extract the file again from the ZIP.
+
+--------------------------------------------------------------------------------
+  v6.5 NOTES
+--------------------------------------------------------------------------------
+  - No new packages.
+  - SPEED (allsnps=TRUE): for batch targets, sequential models, predefined
+    models and rotation the genotype file is now read once; the f4
+    statistics of all models are computed in this single pass and the models
+    are then fitted one by one. Results are identical to the previous path
+    (weights, nested models, SNP table). Target SNPs are counted in the same
+    pass; there is no second read after the results arrive. Models with extra
+    sets and allsnps=FALSE are unchanged. If the pass fails, the program
+    continues the previous way (one read per model).
+  - PROGRESS: during the single pass "Single genotype pass -- block i / N"
+    and the time left for this stage; then "qpAdm fit".
+  - RAW: under each target, that target's rcond / matrix warnings. A RAW
+    downloaded while the run is in progress starts with "RUN IN PROGRESS";
+    sections 4 and 6 hold the warnings and console output so far, with a
+    note.
+  - SELECTION IN THE BATCH TABLE: in Accumulated models, "Select same sets"
+    (selects the models whose Right and Left labels and the individuals
+    behind each label match the selected model) and "Show in batch table"
+    (shows the selection together in the Batch run table). The same
+    individuals under different label names are not combined; the allsnps
+    mode (and maxmiss for FALSE) must match. Otherwise a one-line reason is
+    shown (e.g. "05 / 03 -- Carian: 12 individuals / 10 individuals"). A
+    target that appears more than once gets the run number in its row name
+    ("05 · target"). "Back to the run table" returns to the usual view.
+    "Export table to Excel" on the table card writes the models in the table
+    in the batch Excel format.
 
 --------------------------------------------------------------------------------
   v6.4 NOTES

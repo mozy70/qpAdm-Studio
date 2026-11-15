@@ -1,13 +1,13 @@
 @echo off
 chcp 65001 >nul
 setlocal EnableExtensions DisableDelayedExpansion
-rem qpAdm Studio -- kurulum ve baslatici / installer and launcher (v6.4). Uretici: gelistirme_v64\bat_v64.py
+rem qpAdm Studio -- kurulum ve baslatici / installer and launcher (v6.5). Uretici: gelistirme_v64\bat_v64.py + gelistirme_v65\kurulum_v65.py
 rem Bu dosyayi program dosyasinin yanina koyup cift tiklayin. / Put this file next to the program file and double-click it.
 rem Dil: Windows goruntuleme dili Turkce ise Turkce, degilse Ingilizce. / Language: Turkish if the Windows display language is Turkish, otherwise English.
 cd /d "%~dp0"
 set "QPS_DIR=%~dp0"
 set "QPS_BAT=%~f0"
-set "QPS_PROG=qpAdm Studio v6.4.R"
+set "QPS_PROG=qpAdm Studio v6.5.R"
 set "QPS_RVER=4.5.1"
 set "QPS_PORT=7654"
 set "QPS_BAT_LANG=en"
